@@ -34,6 +34,9 @@
 
 import sys
 import time
+import asyncio
+import threading
+import signal
 
 import rclpy
 from rclpy.node import Node
@@ -46,19 +49,10 @@ from rosbridge_library.capabilities.subscribe import Subscribe
 from rosbridge_library.capabilities.unadvertise_service import UnadvertiseService
 from std_msgs.msg import Int32
 from tornado.httpserver import HTTPServer
-from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.netutil import bind_sockets
 from tornado.web import Application
 
 from rosbridge_server import ClientManager, RosbridgeWebSocket
-
-
-def start_hook():
-    IOLoop.instance().start()
-
-
-def shutdown_hook():
-    IOLoop.instance().stop()
 
 
 class RosbridgeWebsocketNode(Node):
@@ -332,32 +326,45 @@ class RosbridgeWebsocketNode(Node):
         CallService.services_glob = RosbridgeWebSocket.services_glob
 
 
-def main(args=None):
-    if args is None:
-        args = sys.argv
-
-    rclpy.init(args=args)
-    node = RosbridgeWebsocketNode()
-
-    executor = rclpy.executors.SingleThreadedExecutor()
-    executor.add_node(node)
-
+def start_ros_thread(node, shutdown_event):
     def spin_ros():
-        executor.spin_once(timeout_sec=0.01)
-        if not rclpy.ok():
-            shutdown_hook()
-
-    spin_callback = PeriodicCallback(spin_ros, 1)
-    spin_callback.start()
-    try:
-        start_hook()
+        executor = rclpy.executors.SingleThreadedExecutor()
+        executor.add_node(node)
+        while rclpy.ok() and not shutdown_event.is_set():
+            executor.spin_once(timeout_sec=0.1)
         node.destroy_node()
         rclpy.shutdown()
-    except KeyboardInterrupt:
-        print("Exiting due to SIGINT")
-    finally:
-        shutdown_hook()  # shutdown hook to stop the server
+    ros_thread = threading.Thread(target=spin_ros, daemon=True)
+    ros_thread.start()
+    return ros_thread
 
+async def async_main():
+    rclpy.init(args=sys.argv, signal_handler_options=rclpy.signals.SignalHandlerOptions.NO)
+    node = RosbridgeWebsocketNode()
+    shutdown_event = threading.Event()
+    ros_thread = start_ros_thread(node, shutdown_event)
+
+    loop = asyncio.get_running_loop()
+    stop_event = asyncio.Event()
+    signal_handled = False
+
+    def handle_signal():
+        nonlocal signal_handled
+        if signal_handled:
+            return
+        print("Exiting due to SIGINT")
+        shutdown_event.set()
+        stop_event.set()
+        signal_handled = True
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, handle_signal)
+
+    await stop_event.wait()
+    ros_thread.join(timeout=1.0)
+
+def main():
+    asyncio.run(async_main())
 
 if __name__ == "__main__":
     main()
