@@ -60,6 +60,7 @@ class RosbridgeWebsocketNode(Node):
         super().__init__("rosbridge_websocket")
 
         RosbridgeWebSocket.node_handle = self
+        RosbridgeWebSocket.event_loop = asyncio.get_event_loop()
 
         ##################################################
         # Parameter handling                             #

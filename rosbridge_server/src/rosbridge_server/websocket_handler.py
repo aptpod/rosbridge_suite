@@ -34,6 +34,8 @@ import sys
 import threading
 import traceback
 import uuid
+import asyncio
+
 from collections import deque
 from functools import partial, wraps
 
@@ -42,8 +44,6 @@ from rosbridge_library.util import bson
 from tornado.ioloop import IOLoop
 from tornado.iostream import StreamClosedError
 from tornado.websocket import WebSocketClosedError, WebSocketHandler
-
-_io_loop = IOLoop.instance()
 
 
 def _log_exception():
@@ -124,6 +124,7 @@ class RosbridgeWebSocket(WebSocketHandler):
     unregister_timeout = 10.0  # seconds
     bson_only_mode = False
     node_handle = None
+    event_loop = None
 
     @log_exceptions
     def open(self):
@@ -174,6 +175,8 @@ class RosbridgeWebSocket(WebSocketHandler):
         self.incoming_queue.finish()
 
     def send_message(self, message, compression="none"):
+        cls = self.__class__
+
         if isinstance(message, bson.BSON):
             binary = True
         elif compression in ["cbor", "cbor-raw"]:
@@ -181,7 +184,7 @@ class RosbridgeWebSocket(WebSocketHandler):
         else:
             binary = False
 
-        _io_loop.add_callback(partial(self.prewrite_message, message, binary))
+        asyncio.run_coroutine_threadsafe(self.prewrite_message(message, binary), cls.event_loop)
 
     async def prewrite_message(self, message, binary):
         cls = self.__class__
