@@ -31,12 +31,11 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-
-import sys
-import time
 import asyncio
-import threading
 import signal
+import sys
+import threading
+import time
 
 import rclpy
 from rclpy.node import Node
@@ -335,9 +334,11 @@ def start_ros_thread(node, shutdown_event):
             executor.spin_once(timeout_sec=0.1)
         node.destroy_node()
         rclpy.shutdown()
+
     ros_thread = threading.Thread(target=spin_ros, daemon=True)
     ros_thread.start()
     return ros_thread
+
 
 async def async_main():
     rclpy.init(args=sys.argv, signal_handler_options=rclpy.signals.SignalHandlerOptions.NO)
@@ -364,8 +365,10 @@ async def async_main():
     await stop_event.wait()
     ros_thread.join(timeout=1.0)
 
+
 def main():
     asyncio.run(async_main())
+
 
 if __name__ == "__main__":
     main()
