@@ -331,7 +331,7 @@ def start_ros_thread(node, shutdown_event):
         executor = rclpy.executors.SingleThreadedExecutor()
         executor.add_node(node)
         while rclpy.ok() and not shutdown_event.is_set():
-            executor.spin_once(timeout_sec=0.1)
+            executor.spin_once(timeout_sec=1.0)
         node.destroy_node()
         rclpy.shutdown()
 
@@ -363,7 +363,7 @@ async def async_main():
         loop.add_signal_handler(sig, handle_signal)
 
     await stop_event.wait()
-    ros_thread.join(timeout=1.0)
+    ros_thread.join(timeout=2.0)
 
 
 def main():
