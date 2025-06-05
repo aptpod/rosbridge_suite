@@ -34,6 +34,7 @@ class AdvertisedServiceHandler:
         request_id = f"service_request:{self.service_name}:{self.next_id()}"
 
         future = rclpy.task.Future()
+        future.add_done_callback(lambda _: self.protocol.node_handle.executor.wake())
         self.request_futures[request_id] = future
 
         # build a request to send to the external client
