@@ -39,7 +39,6 @@ import time
 
 import rclpy
 from rclpy.executors import SingleThreadedExecutor
-from rclpy.experimental import EventsExecutor
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from rosbridge_library.capabilities.advertise import Advertise
