@@ -38,6 +38,8 @@ import threading
 import time
 
 import rclpy
+from rclpy.executors import SingleThreadedExecutor
+from rclpy.experimental import EventsExecutor
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from rosbridge_library.capabilities.advertise import Advertise
@@ -326,25 +328,16 @@ class RosbridgeWebsocketNode(Node):
         CallService.services_glob = RosbridgeWebSocket.services_glob
 
 
-def start_ros_thread(node, shutdown_event):
-    def spin_ros():
-        executor = rclpy.executors.SingleThreadedExecutor()
-        executor.add_node(node)
-        while rclpy.ok() and not shutdown_event.is_set():
-            executor.spin_once(timeout_sec=1.0)
-        node.destroy_node()
-        rclpy.shutdown()
-
-    ros_thread = threading.Thread(target=spin_ros, daemon=True)
-    ros_thread.start()
-    return ros_thread
-
-
 async def async_main():
     rclpy.init(args=sys.argv, signal_handler_options=rclpy.signals.SignalHandlerOptions.NO)
+
     node = RosbridgeWebsocketNode()
-    shutdown_event = threading.Event()
-    ros_thread = start_ros_thread(node, shutdown_event)
+
+    executor = SingleThreadedExecutor()
+    executor.add_node(node)
+
+    spin_thread = threading.Thread(target=executor.spin)
+    spin_thread.start()
 
     loop = asyncio.get_running_loop()
     stop_event = asyncio.Event()
@@ -355,15 +348,18 @@ async def async_main():
         if signal_handled:
             return
         print("Exiting due to SIGINT")
-        shutdown_event.set()
         stop_event.set()
+        executor.shutdown()
         signal_handled = True
 
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, handle_signal)
 
     await stop_event.wait()
-    ros_thread.join(timeout=2.0)
+    spin_thread.join()
+
+    node.destroy_node()
+    rclpy.shutdown()
 
 
 def main():
