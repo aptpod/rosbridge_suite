@@ -145,7 +145,7 @@ fi
 # Build for each architecture
 for ARCH in "${ARCHITECTURES[@]}"; do
     echo -e "${YELLOW}Building Docker image for architecture: ${ARCH}${NC}"
-    
+
     # Build platform-specific image
     docker build \
         --platform "linux/${ARCH}" \
@@ -154,7 +154,7 @@ for ARCH in "${ARCHITECTURES[@]}"; do
         "${SCRIPT_DIR}"
 
     echo -e "${YELLOW}Running build for architecture: ${ARCH}${NC}"
-    
+
     # Run build without platform specification (image is already platform-specific)
     docker run --rm \
         -v "${SCRIPT_DIR}:/source:ro" \
