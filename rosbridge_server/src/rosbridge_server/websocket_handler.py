@@ -158,9 +158,13 @@ class RosbridgeWebSocket(WebSocketHandler):
 
     @log_exceptions
     def on_message(self, message):
-        if isinstance(message, bytes):
-            message = message.decode("utf-8")
-        self.incoming_queue.push(message)
+        if self.bson_only_mode and isinstance(message, bytes):
+            # BSON ONLY MODE: push binary directly
+            self.incoming_queue.push(message)
+        else:
+            if isinstance(message, bytes):
+                message = message.decode("utf-8")
+            self.incoming_queue.push(message)
 
     @log_exceptions
     def on_close(self):

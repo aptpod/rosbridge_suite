@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Build artifacts
+build/
+install/
+log/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+*.md
+
+# CI/CD
+.github/
+.dockerignore
+Dockerfile*
+
+# Python
+*.pyc
+*.pyo
+__pycache__/
+.pytest_cache/
+.coverage
+.tox/
+venv/
+env/
