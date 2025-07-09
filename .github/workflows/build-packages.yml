@@ -10,14 +10,14 @@ on:
     tags:
       - 'v*'
   pull_request:
-  
+
   # Trigger after CI workflow completes successfully (temporarily commented out)
   # workflow_run:
   #   workflows: ["CI"]
   #   types:
   #     - completed
   #   branches: [ main, develop, feature/#1-add-bson-support-humble ]
-  
+
   # Allow manual trigger
   workflow_dispatch:
     inputs:
@@ -37,9 +37,9 @@ jobs:
       matrix:
         arch: [amd64, arm64]  # Remove armhf due to lack of official ROS Humble Docker support
         # Temporarily disable arm64 if experiencing timeout issues
-        # arch: [amd64] 
+        # arch: [amd64]
       fail-fast: false  # Continue other builds even if one fails
-    
+
     steps:
     - name: Display CI status
       run: |
@@ -48,14 +48,14 @@ jobs:
         echo "Triggered by: ${{ github.event_name }}"
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Set up QEMU for cross-compilation
       uses: docker/setup-qemu-action@v3
       with:
         platforms: all
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-      
+
     - name: Build Debian package for ${{ matrix.arch }}
       timeout-minutes: 60  # ARM64 emulation can take 20+ minutes per package, total build may need 45-60 minutes
       run: |
@@ -100,7 +100,7 @@ jobs:
     needs: build
     if: always()  # Temporarily simplified for testing
     # if: always() && (github.event.workflow_run.conclusion == 'success' || github.event.inputs.skip_ci_check == 'true')
-    
+
     steps:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
@@ -166,17 +166,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build, summary]
     if: startsWith(github.ref, 'refs/tags/')
-    
+
     steps:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
         path: artifacts/
-        
+
     - name: Create release packages
       run: |
         mkdir -p release/
-        
+
         # Create zip files for each architecture
         for arch in amd64 arm64; do
           if [ -d "artifacts/debian-packages-$arch" ]; then
@@ -190,14 +190,14 @@ jobs:
             echo "Warning: No artifacts found for $arch"
           fi
         done
-        
+
         echo "Release packages created:"
         ls -la release/
-        
+
     - name: Extract tag name
       id: tag
       run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-        
+
     - name: Create Release
       uses: actions/create-release@v1
       id: create_release
@@ -208,43 +208,43 @@ jobs:
         release_name: ROS 2 rosbridge_suite with BSON support ${{ steps.tag.outputs.tag }}
         body: |
           ## ROS 2 rosbridge_suite with BSON support
-          
+
           This release contains Debian packages for ROS 2 Humble with BSON serialization support.
-          
+
           ### Supported Architectures
           - **amd64**: Standard x86_64 Linux systems
           - **arm64**: ARM64 systems (Raspberry Pi 4, Apple Silicon, etc.)
-          
+
           ### Installation
-          
+
           1. Download the appropriate zip file for your architecture
           2. Extract the zip file
           3. Install dependencies and the package:
-          
+
           ```bash
           # Install dependencies
           sudo apt update
           sudo apt install -y python3-twisted python3-tornado python3-autobahn python3-pymongo python3-pil
-          
+
           # Install the package
           sudo dpkg -i ros-humble-rosbridge-suite_*.deb
-          
+
           # Use the package
           source /opt/ros/humble/setup.bash
           ros2 launch rosbridge_server rosbridge_websocket_launch.xml
           ```
-          
+
           ### What's Included
           - rosbridge_library with BSON support
           - rosbridge_server WebSocket server
           - rosapi ROS API services
           - All necessary message definitions
           - Installation documentation (INSTALL.md)
-          
+
           The WebSocket server will be available at `ws://localhost:9090` with BSON support enabled.
         draft: false
         prerelease: false
-        
+
     - name: Upload amd64 Release Asset
       if: hashFiles('release/rosbridge-suite-amd64.zip') != ''
       uses: actions/upload-release-asset@v1
@@ -255,7 +255,7 @@ jobs:
         asset_path: ./release/rosbridge-suite-amd64.zip
         asset_name: rosbridge-suite-amd64.zip
         asset_content_type: application/zip
-        
+
     - name: Upload arm64 Release Asset
       if: hashFiles('release/rosbridge-suite-arm64.zip') != ''
       uses: actions/upload-release-asset@v1
