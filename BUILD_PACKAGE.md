@@ -120,7 +120,7 @@ WebSocketサーバーは`ws://localhost:9090`でBSON対応を含めて利用可�
 
 #### 1. `ros2 launch`でパッケージが見つからない
 
-**問題**: 
+**問題**:
 ```
 [ERROR] [launch]: package 'rosbridge_server' not found
 ```
@@ -208,7 +208,7 @@ package "ソースコード (Fork版)" as src {
         BSON serialization
         Support patch
     end note
-    
+
     A --> B
     A --> C
     A --> D
@@ -222,7 +222,7 @@ package "ビルドプロセス" as build {
     component "Docker Container\nUbuntu 22.04" as H
     component "colcon build\nROS 2 Humble" as I
     component "Debian Package\nCreation" as J
-    
+
     G --> H
     H --> I
     I --> J
@@ -231,13 +231,13 @@ package "ビルドプロセス" as build {
 package "出力パッケージ" as output {
     component "debian-packages/" as K #f3e5f5
     component "INSTALL.md" as O
-    
+
     package "debファイル群" as debs {
         component "ros-humble-rosbridge-suite_amd64.deb" as L1
         component "ros-humble-rosbridge-suite_arm64.deb" as L2
         component "ros-humble-rosbridge-suite_armhf.deb" as L3
     }
-    
+
     K --> debs
     K --> O
 }
@@ -246,7 +246,7 @@ package "インストール・利用 ROS 2 Humble" as install {
     component "dpkg -i\nros-humble-rosbridge-suite_*.deb" as P
     component "ROS 2 Humble\nEnvironment" as R #e8f5e8
     component "rosbridge WebSocket Server" as S
-    
+
     P --> R
     R --> S
 }
@@ -257,7 +257,7 @@ debs --> P
 
 ' レイアウト指定
 src -[hidden]down-> build
-build -[hidden]down-> output  
+build -[hidden]down-> output
 output -[hidden]down-> install
 
 @enduml
@@ -357,7 +357,7 @@ BSON対応は`rosbridge_server/src/rosbridge_server/websocket_handler.py`に実�
 ### パッケージサイズ
 
 - **最終パッケージサイズ**: 約754KB
-- **主要コンポーネント**: 
+- **主要コンポーネント**:
   - Pythonライブラリ: ~400KB
   - 共有ライブラリ(.so): ~250KB
   - 設定・メタデータ: ~100KB

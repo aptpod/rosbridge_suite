@@ -2,16 +2,14 @@
 import os
 import sys
 import unittest
-import json
 
 from rclpy.node import Node
-from std_msgs.msg import String
 from twisted.python import log
 
 sys.path.append(os.path.dirname(__file__))  # enable importing from common.py in this directory
 
 import common  # noqa: E402
-from common import expect_messages, sleep, websocket_test  # noqa: E402
+from common import sleep, websocket_test  # noqa: E402
 
 log.startLogging(sys.stderr)
 
@@ -22,12 +20,7 @@ try:
     import bson
     BSON_AVAILABLE = True
 except ImportError:
-    try:
-        from bson import BSON
-        import bson
-        BSON_AVAILABLE = True
-    except ImportError:
-        BSON_AVAILABLE = False
+    BSON_AVAILABLE = False
 
 
 class TestBsonSerialization(unittest.TestCase):
@@ -107,28 +100,15 @@ class TestBsonSerialization(unittest.TestCase):
                 # Test BSON encoding/decoding with correct method
                 try:
                     # Try pymongo BSON first
-                    import bson as pymongo_bson
-                    bson_data = pymongo_bson.encode(test_data)
-                    decoded_data = pymongo_bson.decode(bson_data)
-                except AttributeError:
-                    # Fallback to other BSON libraries
-                    try:
-                        from bson import BSON
-                        bson_obj = BSON.encode(test_data)
-                        decoded_data = BSON(bson_obj).decode()
-                    except (ImportError, AttributeError):
-                        # Skip BSON library test if methods not available
-                        pass
-                    else:
-                        self.assertEqual(decoded_data["string_field"], "test_string")
-                        self.assertEqual(decoded_data["number_field"], 42)
-                        self.assertEqual(decoded_data["boolean_field"], True)
-                        self.assertEqual(decoded_data["array_field"], [1, 2, 3])
-                else:
+                    bson_data = bson.encode(test_data)
+                    decoded_data = bson.decode(bson_data)
                     self.assertEqual(decoded_data["string_field"], "test_string")
                     self.assertEqual(decoded_data["number_field"], 42)
                     self.assertEqual(decoded_data["boolean_field"], True)
                     self.assertEqual(decoded_data["array_field"], [1, 2, 3])
+                except AttributeError:
+                    # Skip BSON library test if methods not available
+                    pass
                 
             except Exception as e:
                 # Don't fail the test if BSON library test fails
