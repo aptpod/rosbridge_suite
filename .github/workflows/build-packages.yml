@@ -53,6 +53,7 @@ jobs:
     - name: Build Debian package for ${{ matrix.arch }}
       run: |
         echo "Building Debian package for ${{ matrix.arch }}"
+        # Use specific architecture argument (new improved CLI)
         ./build-deb.sh ${{ matrix.arch }}
         
     - name: List generated packages

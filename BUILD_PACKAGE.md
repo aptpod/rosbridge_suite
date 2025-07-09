@@ -44,7 +44,21 @@ ROS 2公式リポジトリ (`repo.ros2.org`) に存在するパッケージ：
 
 ```bash
 # リポジトリのルートディレクトリで実行
+
+# 現在のアーキテクチャのみビルド（最も高速）
 ./build-deb.sh
+
+# 全サポートアーキテクチャビルド
+./build-deb.sh --all
+
+# 特定のアーキテクチャのみ
+./build-deb.sh amd64
+
+# 複数アーキテクチャ
+./build-deb.sh amd64 arm64
+
+# クリーンビルド
+./build-deb.sh --clean --all
 ```
 
 このスクリプトは以下を実行します：
@@ -200,10 +214,48 @@ docker run --rm -v "$(pwd):/source:ro" -v "$(pwd)/debian-packages:/output" rosbr
 
 ```bash
 # 注意: QEMUエミュレーションが必要（時間がかかります）
-./build-deb.sh
+./build-deb.sh --all
 ```
 
 ※ QEMUエミュレーションを使用するため、ネイティブビルドより時間がかかります
+
+### 新しい機能
+
+```bash
+# サポートアーキテクチャ一覧の表示
+./build-deb.sh --list
+
+# ビルド前のクリーンアップ
+./build-deb.sh --clean --all
+
+# 短縮形
+./build-deb.sh -a    # --all と同じ
+
+# ヘルプ表示
+./build-deb.sh --help
+```
+
+### 実用的な使用例
+
+```bash
+# 開発時：現在のアーキテクチャのみ（最も高速）
+./build-deb.sh
+
+# CI/CD：全アーキテクチャビルド
+./build-deb.sh --all
+
+# リリース準備：クリーンビルド
+./build-deb.sh --clean --all
+
+# 特定環境向け：複数アーキテクチャ
+./build-deb.sh amd64 arm64
+
+# トラブルシューティング：重複排除テスト
+./build-deb.sh amd64 amd64 arm64  # 自動的に amd64 arm64 になる
+
+# 現在の環境確認
+./build-deb.sh --list
+```
 
 ## システムアーキテクチャー
 
