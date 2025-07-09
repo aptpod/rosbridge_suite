@@ -29,7 +29,7 @@ jobs:
     # if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.inputs.skip_ci_check == 'true' }}
     strategy:
       matrix:
-        arch: [amd64, arm64, armhf]
+        arch: [amd64, arm64]  # Remove armhf due to lack of official ROS Humble Docker support
       fail-fast: false  # Continue other builds even if one fails
     
     steps:
@@ -110,7 +110,7 @@ jobs:
         echo "## Generated Packages" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
-        for arch in amd64 arm64 armhf; do
+        for arch in amd64 arm64; do
           if [ -d "artifacts/debian-packages-$arch" ]; then
             echo "### $arch" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY

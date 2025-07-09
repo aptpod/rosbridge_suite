@@ -12,6 +12,24 @@
 
 Dockerを使用してクリーンな環境でDebianパッケージをビルドし、`apt install`でインストール可能な単一パッケージを生成します。
 
+## サポートアーキテクチャ
+
+公式ros-humble-rosbridge-suiteのサポート状況に合わせて、以下のアーキテクチャをサポートします：
+
+| アーキテクチャ | サポート状況 | Tier | パッケージ形式 | 備考 |
+|---------|--------|------|----------|------|
+| **amd64** | ✅ 完全サポート | Tier 1 | バイナリパッケージ | 標準的なx86_64 Linux |
+| **arm64** | ✅ 完全サポート | Tier 1 | バイナリパッケージ | Raspberry Pi 4、Apple Silicon等 |
+| **armhf** | ❌ 非サポート | Tier 3 | ソースからビルド必要 | 公式ROSパッケージなし |
+
+### 参考：公式パッケージ
+
+ROS 2公式リポジトリ (`repo.ros2.org`) に存在するパッケージ：
+- `ros-humble-rosbridge-suite_2.0.1-1jammy.20250701.065406_amd64.deb`
+- `ros-humble-rosbridge-suite_2.0.1-1jammy.20250701.173947_arm64.deb`
+
+**armhfアーキテクチャはサポートしていません。**
+
 ## 必要な環境
 
 - Docker
@@ -39,7 +57,7 @@ Dockerを使用してクリーンな環境でDebianパッケージをビルド�
 
 ビルドが成功すると、以下のファイルが`debian-packages/`ディレクトリに生成されます：
 
-- `ros-humble-rosbridge-suite_<arch>.deb` - 統合パッケージ（amd64, arm64, armhfなど）
+- `ros-humble-rosbridge-suite_<arch>.deb` - 統合パッケージ（amd64, arm64）
 - `INSTALL.md` - インストール手順
 
 ## インストール方法
@@ -178,11 +196,11 @@ docker run --rm -v "$(pwd):/source:ro" -v "$(pwd)/debian-packages:/output" rosbr
 
 ### 全アーキテクチャ用ビルド
 
-主要なアーキテクチャ（amd64、arm64、armhf）用のパッケージを一括ビルド：
+サポートアーキテクチャ（amd64、arm64）用のパッケージを一括ビルド：
 
 ```bash
 # 注意: QEMUエミュレーションが必要（時間がかかります）
-./build-all-arch.sh
+./build-deb.sh
 ```
 
 ※ QEMUエミュレーションを使用するため、ネイティブビルドより時間がかかります

@@ -27,13 +27,13 @@ show_help() {
     echo "Usage: $0 [OPTION|ARCH]"
     echo ""
     echo "Options:"
-    echo "  (no args)     Build for all architectures (amd64, arm64, armhf)"
+    echo "  (no args)     Build for supported architectures (amd64, arm64)"
     echo "  --current     Build for current architecture only (fast)"
     echo "  --help, -h    Show this help message"
-    echo "  ARCH          Build for specific architecture (amd64, arm64, armhf)"
+    echo "  ARCH          Build for specific architecture (amd64, arm64)"
     echo ""
     echo "Examples:"
-    echo "  $0                   # Build all architectures"
+    echo "  $0                   # Build supported architectures"
     echo "  $0 --current         # Build current architecture only"
     echo "  $0 amd64             # Build for amd64 only"
     echo "  $0 arm64             # Build for arm64 only"
@@ -43,9 +43,9 @@ show_help() {
 
 # Parse command line arguments
 if [ $# -eq 0 ]; then
-    # Default: all architectures
-    ARCHITECTURES=("amd64" "arm64" "armhf")
-    echo -e "${YELLOW}Building for all architectures (use --current for current architecture only)${NC}"
+    # Default: supported architectures (matching official ros-humble-rosbridge-suite)
+    ARCHITECTURES=("amd64" "arm64")
+    echo -e "${YELLOW}Building for supported architectures (use --current for current architecture only)${NC}"
 elif [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     show_help
     exit 0
