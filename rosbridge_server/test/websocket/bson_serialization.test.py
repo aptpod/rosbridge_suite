@@ -136,19 +136,25 @@ class TestBsonSerialization(unittest.TestCase):
         
         # Verify responses
         # Check for service response
-        service_responses = [msg for msg in received_messages 
-                           if msg.get("op") == "service_response"]
+        service_responses = [
+            msg
+            for msg in received_messages
+            if msg.get("op") == "service_response"
+        ]
         self.assertGreater(len(service_responses), 0, "Should receive service response")
-        
+
         # Check for published messages
-        publish_msgs = [msg for msg in received_messages 
-                      if msg.get("op") == "publish" and msg.get("topic") == TEST_TOPIC]
+        publish_msgs = [
+            msg
+            for msg in received_messages
+            if msg.get("op") == "publish" and msg.get("topic") == TEST_TOPIC
+        ]
         self.assertGreater(len(publish_msgs), 0, "Should receive at least one publish message")
-        
+
         # Test disabling BSON mode
         ws_client.sendJson({"op": "set_bson_only_mode", "bson_only": False})
         await sleep(node, 0.5)
-        
+
         # Cleanup
         ws_client.sendJson({"op": "unsubscribe", "topic": TEST_TOPIC})
         ws_client.sendJson({"op": "unsubscribe", "topic": BINARY_TOPIC})
