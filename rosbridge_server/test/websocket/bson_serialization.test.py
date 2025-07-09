@@ -48,45 +48,29 @@ class TestBsonSerialization(unittest.TestCase):
             "args": {}
         })
         await sleep(node, 1.0)
-        
+
         # Test 3: BSON publish/subscribe
         TEST_TOPIC = "/test_bson_topic"
         TEST_MESSAGE = "BSON test message"
-        
+
         # Subscribe to test topic
-        ws_client.sendJson({
-            "op": "subscribe",
-            "topic": TEST_TOPIC,
-            "type": "std_msgs/String"
-        })
+        ws_client.sendJson({"op": "subscribe", "topic": TEST_TOPIC, "type": "std_msgs/String"})
         await sleep(node, 1.0)
-        
+
         # Publish to the topic
-        ws_client.sendJson({
-            "op": "publish",
-            "topic": TEST_TOPIC,
-            "msg": {"data": TEST_MESSAGE}
-        })
+        ws_client.sendJson({"op": "publish", "topic": TEST_TOPIC, "msg": {"data": TEST_MESSAGE}})
         await sleep(node, 1.0)
-        
+
         # Test 4: Binary data handling
         binary_data = "SGVsbG8gV29ybGQ="  # "Hello World" in base64
         BINARY_TOPIC = "/test_binary_topic"
-        
-        ws_client.sendJson({
-            "op": "subscribe",
-            "topic": BINARY_TOPIC,
-            "type": "std_msgs/String"
-        })
+
+        ws_client.sendJson({"op": "subscribe", "topic": BINARY_TOPIC, "type": "std_msgs/String"})
         await sleep(node, 0.5)
-        
-        ws_client.sendJson({
-            "op": "publish",
-            "topic": BINARY_TOPIC,
-            "msg": {"data": binary_data}
-        })
+
+        ws_client.sendJson({"op": "publish", "topic": BINARY_TOPIC, "msg": {"data": binary_data}})
         await sleep(node, 1.0)
-        
+
         # Test 5: BSON library integration (if available)
         if BSON_AVAILABLE:
             try:
@@ -97,7 +81,6 @@ class TestBsonSerialization(unittest.TestCase):
                     "array_field": [1, 2, 3],
                 }
 
-                
                 # Test BSON encoding/decoding with correct method
                 try:
                     # Try pymongo BSON first
@@ -111,12 +94,10 @@ class TestBsonSerialization(unittest.TestCase):
                     # Skip BSON library test if methods not available
                     pass
 
-                
             except Exception as e:
                 # Don't fail the test if BSON library test fails
                 print(f"BSON library test skipped: {e}")
 
-        
         # Verify responses
         # Check for service response
         service_responses = [
