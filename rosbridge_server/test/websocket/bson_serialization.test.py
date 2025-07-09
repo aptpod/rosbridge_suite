@@ -94,8 +94,9 @@ class TestBsonSerialization(unittest.TestCase):
                     "string_field": "test_string",
                     "number_field": 42,
                     "boolean_field": True,
-                    "array_field": [1, 2, 3]
+                    "array_field": [1, 2, 3],
                 }
+
                 
                 # Test BSON encoding/decoding with correct method
                 try:
@@ -109,17 +110,17 @@ class TestBsonSerialization(unittest.TestCase):
                 except AttributeError:
                     # Skip BSON library test if methods not available
                     pass
+
                 
             except Exception as e:
                 # Don't fail the test if BSON library test fails
                 print(f"BSON library test skipped: {e}")
+
         
         # Verify responses
         # Check for service response
         service_responses = [
-            msg
-            for msg in received_messages
-            if msg.get("op") == "service_response"
+            msg for msg in received_messages if msg.get("op") == "service_response"
         ]
         self.assertGreater(len(service_responses), 0, "Should receive service response")
 
