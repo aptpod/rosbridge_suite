@@ -50,7 +50,16 @@ fi
 # Build all packages using colcon first
 echo "Building all packages with colcon..."
 cd /workspace
-colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+# Limit parallel jobs for emulated environments to prevent resource issues
+PARALLEL_JOBS=$(nproc)
+if [ "$PARALLEL_JOBS" -gt 2 ]; then
+    PARALLEL_JOBS=2
+fi
+
+echo "Using $PARALLEL_JOBS parallel workers for colcon build"
+echo "Starting colcon build at $(date)"
+colcon build --parallel-workers $PARALLEL_JOBS --cmake-args -DCMAKE_BUILD_TYPE=Release --event-handlers console_direct+
+echo "Colcon build completed at $(date)"
 
 # Debug: Check if BSON modifications exist in built packages
 echo "=== DEBUG: Checking BSON modifications in built packages ==="

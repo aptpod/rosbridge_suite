@@ -30,6 +30,8 @@ jobs:
     strategy:
       matrix:
         arch: [amd64, arm64]  # Remove armhf due to lack of official ROS Humble Docker support
+        # Temporarily disable arm64 if experiencing timeout issues
+        # arch: [amd64] 
       fail-fast: false  # Continue other builds even if one fails
     
     steps:
@@ -51,6 +53,7 @@ jobs:
       uses: docker/setup-buildx-action@v3
       
     - name: Build Debian package for ${{ matrix.arch }}
+      timeout-minutes: 20  # Set timeout to prevent hanging builds
       run: |
         echo "Building Debian package for ${{ matrix.arch }}"
         # Use specific architecture argument (new improved CLI)
