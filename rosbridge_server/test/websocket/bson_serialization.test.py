@@ -18,6 +18,7 @@ generate_test_description = common.generate_test_description
 # Try to import BSON libraries - fallback to JSON if not available
 try:
     import bson
+
     BSON_AVAILABLE = True
 except ImportError:
     BSON_AVAILABLE = False
@@ -28,25 +29,21 @@ class TestBsonSerialization(unittest.TestCase):
     async def test_bson_comprehensive(self, node: Node, make_client):
         """Comprehensive test for BSON functionality combining multiple test cases."""
         ws_client = await make_client()
-        
+
         # Set up message handler
         received_messages = []
-        
+
         def message_handler(msg):
             received_messages.append(msg)
-        
+
         ws_client.message_handler = message_handler
-        
+
         # Test 1: BSON mode toggle
         ws_client.sendJson({"op": "set_bson_only_mode", "bson_only": True})
         await sleep(node, 0.5)
-        
+
         # Test 2: BSON service call
-        ws_client.sendJson({
-            "op": "call_service",
-            "service": "/rosapi/get_time",
-            "args": {}
-        })
+        ws_client.sendJson({"op": "call_service", "service": "/rosapi/get_time", "args": {}})
         await sleep(node, 1.0)
 
         # Test 3: BSON publish/subscribe
