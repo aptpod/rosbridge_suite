@@ -60,20 +60,24 @@ else
     echo -e "${YELLOW}Building for specified architecture: $1${NC}"
 fi
 
-# Build Docker image once
-echo -e "${YELLOW}Building Docker image for multi-architecture build...${NC}"
-docker build -f "${SCRIPT_DIR}/docker/Dockerfile.debian-build" -t rosbridge-debian-builder:latest "${SCRIPT_DIR}"
-
 # Build for each architecture
 for ARCH in "${ARCHITECTURES[@]}"; do
-    echo -e "${YELLOW}Building for architecture: ${ARCH}${NC}"
-
-    # Run build with platform specification
-    docker run --rm \
+    echo -e "${YELLOW}Building Docker image for architecture: ${ARCH}${NC}"
+    
+    # Build platform-specific image
+    docker build \
         --platform "linux/${ARCH}" \
+        -f "${SCRIPT_DIR}/docker/Dockerfile.debian-build" \
+        -t "rosbridge-debian-builder:${ARCH}" \
+        "${SCRIPT_DIR}"
+
+    echo -e "${YELLOW}Running build for architecture: ${ARCH}${NC}"
+    
+    # Run build without platform specification (image is already platform-specific)
+    docker run --rm \
         -v "${SCRIPT_DIR}:/source:ro" \
         -v "${OUTPUT_DIR}:/output" \
-        rosbridge-debian-builder:latest
+        "rosbridge-debian-builder:${ARCH}"
 
     echo -e "${GREEN}Completed build for ${ARCH}${NC}"
     echo ""
