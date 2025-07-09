@@ -53,7 +53,7 @@ jobs:
       uses: docker/setup-buildx-action@v3
       
     - name: Build Debian package for ${{ matrix.arch }}
-      timeout-minutes: 20  # Set timeout to prevent hanging builds
+      timeout-minutes: 60  # ARM64 emulation can take 20+ minutes per package, total build may need 45-60 minutes
       run: |
         echo "Building Debian package for ${{ matrix.arch }}"
         # Use specific architecture argument (new improved CLI)
