@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build Debian packages for rosbridge_suite with BSON support
-# 
+#
 # For usage information, run: ./build-deb.sh --help
 
 set -e
@@ -67,14 +67,14 @@ docker build -f "${SCRIPT_DIR}/docker/Dockerfile.debian-build" -t rosbridge-debi
 # Build for each architecture
 for ARCH in "${ARCHITECTURES[@]}"; do
     echo -e "${YELLOW}Building for architecture: ${ARCH}${NC}"
-    
+
     # Run build with platform specification
     docker run --rm \
         --platform "linux/${ARCH}" \
         -v "${SCRIPT_DIR}:/source:ro" \
         -v "${OUTPUT_DIR}:/output" \
         rosbridge-debian-builder:latest
-    
+
     echo -e "${GREEN}Completed build for ${ARCH}${NC}"
     echo ""
 done

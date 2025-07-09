@@ -19,7 +19,7 @@ rosdep update
 if [ -d "/source" ]; then
     echo "Copying source code from /source..."
     cp -r /source/* /workspace/
-    
+
     # Debug: Check if BSON modifications exist in copied source
     echo "=== DEBUG: Checking BSON modifications in copied source ==="
     if [ -f "/workspace/rosbridge_server/src/rosbridge_server/websocket_handler.py" ]; then
@@ -31,7 +31,7 @@ if [ -d "/source" ]; then
         else
             echo "✗ BSON modifications NOT found in source"
         fi
-        
+
         echo "Checking for 'BSON ONLY MODE' comment:"
         if grep -q "BSON ONLY MODE" /workspace/rosbridge_server/src/rosbridge_server/websocket_handler.py; then
             echo "✓ 'BSON ONLY MODE' comment found"
@@ -59,7 +59,7 @@ if [ -d "install" ]; then
     BUILT_WEBSOCKET_FILE=$(find install -name "websocket_handler.py" -type f | head -1)
     if [ -n "$BUILT_WEBSOCKET_FILE" ]; then
         echo "Found built websocket_handler.py at: $BUILT_WEBSOCKET_FILE"
-        
+
         if grep -q "bson_only_mode" "$BUILT_WEBSOCKET_FILE"; then
             echo "✓ BSON modifications found in built package"
             echo "Lines with bson_only_mode:"
@@ -67,7 +67,7 @@ if [ -d "install" ]; then
         else
             echo "✗ BSON modifications NOT found in built package"
         fi
-        
+
         if grep -q "BSON ONLY MODE" "$BUILT_WEBSOCKET_FILE"; then
             echo "✓ 'BSON ONLY MODE' comment found in built package"
             grep -A 2 -B 2 "BSON ONLY MODE" "$BUILT_WEBSOCKET_FILE"
@@ -102,7 +102,7 @@ for pkg_dir in install/*/; do
     if [ -d "$pkg_dir" ]; then
         pkg_name=$(basename "$pkg_dir")
         echo "Processing package: $pkg_name"
-        
+
         # Only copy from package/local/* to /opt/ros/humble/*
         if [ -d "$pkg_dir/local" ]; then
             # Handle Python packages: convert dist-packages to site-packages
@@ -110,13 +110,13 @@ for pkg_dir in install/*/; do
                 mkdir -p debian/opt/ros/humble/lib/python3.10/site-packages
                 cp -r "$pkg_dir/local/lib/python3.10/dist-packages"/* debian/opt/ros/humble/lib/python3.10/site-packages/ 2>/dev/null || true
             fi
-            
+
             # Handle share directory
             if [ -d "$pkg_dir/local/share" ]; then
                 mkdir -p debian/opt/ros/humble/share
                 cp -r "$pkg_dir/local/share"/* debian/opt/ros/humble/share/ 2>/dev/null || true
             fi
-            
+
             # Handle bin directory
             if [ -d "$pkg_dir/local/bin" ]; then
                 mkdir -p debian/opt/ros/humble/bin
@@ -124,7 +124,7 @@ for pkg_dir in install/*/; do
                 # Make executables executable
                 find debian/opt/ros/humble/bin -type f -exec chmod +x {} \;
             fi
-            
+
             # Handle other lib files (excluding python3.10 which we handled above)
             if [ -d "$pkg_dir/local/lib" ]; then
                 for item in "$pkg_dir/local/lib"/*; do
@@ -137,7 +137,7 @@ for pkg_dir in install/*/; do
                     fi
                 done
             fi
-            
+
             # Handle standard ROS 2 lib directory (critical for .so files)
             if [ -d "$pkg_dir/lib" ]; then
                 mkdir -p debian/opt/ros/humble/lib
@@ -153,33 +153,33 @@ echo "Copying ROS 2 package metadata..."
 for pkg_dir in install/*/; do
     if [ -d "$pkg_dir" ]; then
         pkg_name=$(basename "$pkg_dir")
-        
+
         # Copy package.xml files for ROS 2 package discovery
         if [ -f "/workspace/${pkg_name}/package.xml" ]; then
             mkdir -p "debian/opt/ros/humble/share/${pkg_name}"
             cp "/workspace/${pkg_name}/package.xml" "debian/opt/ros/humble/share/${pkg_name}/"
             echo "Copied package.xml for $pkg_name"
         fi
-        
+
         # Copy CMakeLists.txt if exists
         if [ -f "/workspace/${pkg_name}/CMakeLists.txt" ]; then
             mkdir -p "debian/opt/ros/humble/share/${pkg_name}"
             cp "/workspace/${pkg_name}/CMakeLists.txt" "debian/opt/ros/humble/share/${pkg_name}/"
         fi
-        
+
         # Copy launch files if they exist
         if [ -d "/workspace/${pkg_name}/launch" ]; then
             mkdir -p "debian/opt/ros/humble/share/${pkg_name}/launch"
             cp -r "/workspace/${pkg_name}/launch"/* "debian/opt/ros/humble/share/${pkg_name}/launch/"
         fi
-        
+
         # Copy scripts if they exist
         if [ -d "/workspace/${pkg_name}/scripts" ]; then
             mkdir -p "debian/opt/ros/humble/share/${pkg_name}/scripts"
             cp -r "/workspace/${pkg_name}/scripts"/* "debian/opt/ros/humble/share/${pkg_name}/scripts/"
             chmod +x "debian/opt/ros/humble/share/${pkg_name}/scripts"/*
         fi
-        
+
         # Create ROS 2 executable directory structure for Python packages
         if [ -d "/workspace/${pkg_name}/scripts" ]; then
             mkdir -p "debian/opt/ros/humble/lib/${pkg_name}"
@@ -195,7 +195,7 @@ for pkg_dir in install/*/; do
                 fi
             done
         fi
-        
+
         # Copy built install files (critical for ROS 2 package discovery)
         if [ -d "$pkg_dir/share" ]; then
             mkdir -p "debian/opt/ros/humble/share"
@@ -213,10 +213,10 @@ mkdir -p "debian/opt/ros/humble/share/ament_index/resource_index/package_type"
 for pkg_dir in install/*/; do
     if [ -d "$pkg_dir" ]; then
         pkg_name=$(basename "$pkg_dir")
-        
+
         # Create package resource marker
         touch "debian/opt/ros/humble/share/ament_index/resource_index/packages/${pkg_name}"
-        
+
         # Create package type marker (assume python packages for most)
         if [ -f "/workspace/${pkg_name}/package.xml" ]; then
             if grep -q "<build_type>ament_python</build_type>" "/workspace/${pkg_name}/package.xml"; then
@@ -229,7 +229,7 @@ for pkg_dir in install/*/; do
         else
             echo "ament_python" > "debian/opt/ros/humble/share/ament_index/resource_index/package_type/${pkg_name}"
         fi
-        
+
         echo "Registered $pkg_name in AMENT index"
     fi
 done
@@ -239,7 +239,7 @@ echo "=== DEBUG: Checking BSON modifications in package files ==="
 PACKAGE_WEBSOCKET_FILE=$(find debian/opt/ros/humble -name "websocket_handler.py" -type f | head -1)
 if [ -n "$PACKAGE_WEBSOCKET_FILE" ]; then
     echo "Found websocket_handler.py in package at: $PACKAGE_WEBSOCKET_FILE"
-    
+
     if grep -q "bson_only_mode" "$PACKAGE_WEBSOCKET_FILE"; then
         echo "✓ BSON modifications found in package file"
         echo "Lines with bson_only_mode:"
@@ -247,7 +247,7 @@ if [ -n "$PACKAGE_WEBSOCKET_FILE" ]; then
     else
         echo "✗ BSON modifications NOT found in package file"
     fi
-    
+
     if grep -q "BSON ONLY MODE" "$PACKAGE_WEBSOCKET_FILE"; then
         echo "✓ 'BSON ONLY MODE' comment found in package file"
         grep -A 2 -B 2 "BSON ONLY MODE" "$PACKAGE_WEBSOCKET_FILE"
