@@ -3,6 +3,12 @@ name: Build Debian Packages
 on:
   # Temporarily enable direct triggers for testing
   push:
+    # Trigger on all branch pushes
+    branches:
+      - '**'
+    # Also trigger on version tags for releases
+    tags:
+      - 'v*'
   pull_request:
   
   # Trigger after CI workflow completes successfully (temporarily commented out)
@@ -154,3 +160,109 @@ jobs:
       run: |
         echo "Available artifacts:"
         find artifacts/ -type f -name "*.deb" -exec ls -la {} \;
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build, summary]
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
+        
+    - name: Create release packages
+      run: |
+        mkdir -p release/
+        
+        # Create zip files for each architecture
+        for arch in amd64 arm64; do
+          if [ -d "artifacts/debian-packages-$arch" ]; then
+            echo "Creating zip for $arch..."
+            cd artifacts/debian-packages-$arch
+            zip -r "../../release/rosbridge-suite-$arch.zip" .
+            cd ../..
+            echo "Created: release/rosbridge-suite-$arch.zip"
+            ls -la "release/rosbridge-suite-$arch.zip"
+          else
+            echo "Warning: No artifacts found for $arch"
+          fi
+        done
+        
+        echo "Release packages created:"
+        ls -la release/
+        
+    - name: Extract tag name
+      id: tag
+      run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        
+    - name: Create Release
+      uses: actions/create-release@v1
+      id: create_release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.tag.outputs.tag }}
+        release_name: ROS 2 rosbridge_suite with BSON support ${{ steps.tag.outputs.tag }}
+        body: |
+          ## ROS 2 rosbridge_suite with BSON support
+          
+          This release contains Debian packages for ROS 2 Humble with BSON serialization support.
+          
+          ### Supported Architectures
+          - **amd64**: Standard x86_64 Linux systems
+          - **arm64**: ARM64 systems (Raspberry Pi 4, Apple Silicon, etc.)
+          
+          ### Installation
+          
+          1. Download the appropriate zip file for your architecture
+          2. Extract the zip file
+          3. Install dependencies and the package:
+          
+          ```bash
+          # Install dependencies
+          sudo apt update
+          sudo apt install -y python3-twisted python3-tornado python3-autobahn python3-pymongo python3-pil
+          
+          # Install the package
+          sudo dpkg -i ros-humble-rosbridge-suite_*.deb
+          
+          # Use the package
+          source /opt/ros/humble/setup.bash
+          ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+          ```
+          
+          ### What's Included
+          - rosbridge_library with BSON support
+          - rosbridge_server WebSocket server
+          - rosapi ROS API services
+          - All necessary message definitions
+          - Installation documentation (INSTALL.md)
+          
+          The WebSocket server will be available at `ws://localhost:9090` with BSON support enabled.
+        draft: false
+        prerelease: false
+        
+    - name: Upload amd64 Release Asset
+      if: hashFiles('release/rosbridge-suite-amd64.zip') != ''
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./release/rosbridge-suite-amd64.zip
+        asset_name: rosbridge-suite-amd64.zip
+        asset_content_type: application/zip
+        
+    - name: Upload arm64 Release Asset
+      if: hashFiles('release/rosbridge-suite-arm64.zip') != ''
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./release/rosbridge-suite-arm64.zip
+        asset_name: rosbridge-suite-arm64.zip
+        asset_content_type: application/zip
