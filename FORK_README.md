@@ -69,10 +69,24 @@ git push origin humble-2.0.1+aptpod0.0.1
 ### エンドユーザー向け（推奨）
 
 **GitHub Releasesからダウンロード**:
+
+リリース情報の詳細は[Releasesページ](https://github.com/aptpod/rosbridge_suite/releases)をご覧ください。
+
+### 自動生成される配布物
+
+各タグpush後、GitHub Actionsが以下を自動生成します：
+
+1. **GitHub Release**: タグに基づいたリリースページ
+2. **配布用zipファイル**:
+   - `rosbridge-suite-{タグ名}-amd64.zip` - x86_64 Linux向け
+   - `rosbridge-suite-{タグ名}-arm64.zip` - ARM64 Linux向け
+   - 例: `rosbridge-suite-humble-2.0.1+aptpod0.0.1-amd64.zip`
+3. **詳細なリリースノート**: インストール手順、対応アーキテクチャ、機能説明
+
+### ダウンロード手順
+
 1. [Releasesページ](https://github.com/aptpod/rosbridge_suite/releases)にアクセス
-2. お使いのアーキテクチャに適したzipファイルをダウンロード:
-   - `rosbridge-suite-amd64.zip` x86_64システム用
-   - `rosbridge-suite-arm64.zip` ARM64システム用
+2. お使いのアーキテクチャに適したzipファイルをダウンロード
 
 **インストール**:
 ```bash

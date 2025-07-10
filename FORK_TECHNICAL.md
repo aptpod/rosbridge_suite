@@ -84,35 +84,7 @@ sudo apt install ./ros-humble-rosbridge-suite_*.deb
 
 これで、BSON対応を含むrosbridge_suite全体がインストールされます。
 
-## 動作確認
-
-```bash
-# ROS 2環境の準備
-source /opt/ros/humble/setup.bash
-
-# インストールの確認
-ros2 pkg list | grep rosbridge
-
-# 出力例:
-# rosbridge_library
-# rosbridge_msgs
-# rosbridge_server
-# rosbridge_suite
-# rosbridge_test_msgs
-
-# WebSocketサーバーの起動
-ros2 launch rosbridge_server rosbridge_websocket_launch.xml
-```
-
-WebSocketサーバーは`ws://localhost:9090`でBSON対応を含めて利用可能になります。
-
-### 正常起動時の出力例
-
-```
-[INFO] [rosbridge_websocket-1]: process started with pid [24]
-[INFO] [rosapi_node-2]: process started with pid [26]
-[INFO] [rosbridge_websocket]: Rosbridge WebSocket server started on port 9090
-```
+> **💡 動作確認**: インストール後の動作確認方法については、[FORK_README.md](FORK_README.md)の「サーバー起動」セクションをご覧ください。
 
 ## トラブルシューティング
 
@@ -276,18 +248,16 @@ git push origin humble-2.0.1+aptpod0.0.1
 
 ### 自動生成される配布物
 
-タグpush後、GitHub Actionsが以下を自動生成します：
+GitHub Actionsにより、以下の成果物が自動生成されます：
 
-1. **GitHub Release**: タグに基づいたリリースページ
-2. **配布用zipファイル**:
-   - `rosbridge-suite-amd64.zip` - x86_64 Linux向け
-   - `rosbridge-suite-arm64.zip` - ARM64 Linux向け
-3. **詳細なリリースノート**: インストール手順、対応アーキテクチャ、機能説明
+- **Debian packages**: アーキテクチャ別の.debファイル
+- **GitHub Release**: リリースページとzipファイル（詳細は[FORK_README.md](FORK_README.md)参照）
+- **Build artifacts**: CI/CDでの中間成果物（1日保持）
 
 ### zipファイルの構成
 
-各zipファイルには以下が含まれます：
-- `ros-humble-rosbridge-suite_<arch>.deb` - Debianパッケージ
+各zipファイル（`rosbridge-suite-{tag}-{arch}.zip`）には以下が含まれます：
+- `ros-humble-rosbridge-suite_{arch}.deb` - Debianパッケージ
 - `INSTALL.md` - インストール手順
 
 ### ビルド時間
@@ -295,9 +265,9 @@ git push origin humble-2.0.1+aptpod0.0.1
 - **amd64**: 約5-10分
 - **arm64**: 約30-60分（QEMUエミュレーション使用）
 
-### エンドユーザー向けインストール
+### エンドユーザー向け配布
 
-エンドユーザー向けのインストール手順については、[FORK_README.md](FORK_README.md)の「📦 インストール・使用方法」セクションをご覧ください。
+エンドユーザー向けのダウンロード・インストール手順については、[FORK_README.md](FORK_README.md)の「📦 インストール・使用方法」セクションをご覧ください。GitHub Releasesから事前ビルド済みパッケージが入手できます。
 
 ### 対応タグパターン
 
@@ -362,10 +332,9 @@ graph TD
     subgraph output ["GitHub Release配布"]
         GR["GitHub Release"]
         
-        subgraph debs ["アーキテクチャ別パッケージ"]
-            L1["rosbridge-suite-amd64.zip"]
-            L2["rosbridge-suite-arm64.zip"]
-            NOARMHF["❌ armhf非対応<br/>公式ROSパッケージなし"]
+        subgraph debs ["配布パッケージ"]
+            L1["rosbridge-suite-<br/>{tag}-amd64.zip"]
+            L2["rosbridge-suite-<br/>{tag}-arm64.zip"]
         end
         
         GR --> debs
@@ -420,9 +389,14 @@ graph TD
     class I1,L1,L2 buildNative
     class I2 buildArm
     class GR release
-    class NOARMHF unsupported
     class R ros
 ```
+
+### 配布パッケージの命名例
+
+実際のリリースでは以下のような名前でzipファイルが配布されます：
+- `rosbridge-suite-humble-2.0.1+aptpod0.0.1-amd64.zip`
+- `rosbridge-suite-humble-2.0.1+aptpod0.0.1-arm64.zip`
 
 ## dpkg コマンドの使用方法
 
@@ -522,3 +496,101 @@ BSON対応は`rosbridge_server/src/rosbridge_server/websocket_handler.py`に実�
   - Pythonライブラリ: ~400KB
   - 共有ライブラリ(.so): ~250KB
   - 設定・メタデータ: ~100KB
+
+## 統合テスト
+
+### 概要
+
+このプロジェクトには、JSON/BSONモード両方の動作を検証するPythonベースの統合テストが含まれています。
+
+### テストの実行
+
+```bash
+# テストディレクトリに移動
+cd test/integration-test
+
+# Dockerを使用してテスト実行
+docker compose up --build --abort-on-container-exit test-client
+
+# 手動でのテスト実行
+./run-tests.sh
+```
+
+### テスト環境構成
+
+Docker Composeを使用して以下のサービスを起動：
+
+1. **ros-master**: ROS 2 Humble基盤環境
+2. **chatter-talker**: std_msgs/String（"Hello World: X"）を送信
+3. **pointcloud2-publisher**: sensor_msgs/PointCloud2（100点）を送信
+4. **rosbridge-server**: BSON対応WebSocketサーバー
+5. **test-client**: Python統合テストクライアント
+
+### テスト内容
+
+#### JSON Mode Test (`test_json.py`)
+- WebSocket接続とトピック購読
+- Chatterメッセージ検証（"Hello World"パターン）
+- PointCloud2メッセージ検証（構造チェック）
+- サービス呼び出しテスト
+- 自動成功/失敗判定
+
+#### BSON Mode Test (`test_bson.py`)
+- BSONバイナリメッセージ送受信
+- 同様のメッセージ検証
+- データサイズ計測
+- BSON専用機能テスト
+
+#### 統合テスト (`test_all.py`)
+- JSON/BSON両モードの連続実行
+- 結果の統合とレポート生成
+- 成功率の計算と詳細ログ
+
+### テスト結果
+
+テスト実行後、`results/`ディレクトリに以下が生成されます：
+
+```
+results/
+├── test-results-json-{timestamp}.json    # JSON mode結果
+├── test-results-bson-{timestamp}.json    # BSON mode結果
+└── test-summary.json                     # 統合結果
+```
+
+### CI/CD統合
+
+GitHub Actions (`ci.yml`) で自動実行：
+
+```yaml
+integration-test:
+  name: Integration Tests
+  runs-on: ubuntu-latest
+  needs: test
+  steps:
+    - name: Build Debian package for integration test
+    - name: Run integration tests
+    - name: Upload test results
+```
+
+テストが失敗した場合、CI/CDパイプラインが失敗し、詳細なログが確認できます。
+
+### BSONモードの詳細
+
+#### 標準モード vs BSON専用モード
+
+| モード | 説明 | 対応クライアント | パフォーマンス |
+|--------|------|------------------|----------------|
+| **標準モード** | JSON/BSON両方対応 | JSON、BSON | 標準 |
+| **BSON専用モード** | BSONのみ受付 | BSONのみ | 高性能 |
+
+#### 使い分けの指針
+
+- **標準モード**: 既存JSONクライアントとの互換性が必要な場合
+- **BSON専用モード**: 高性能なバイナリ通信が必要な場合（大容量データ、高頻度通信）
+
+#### 性能比較
+
+BSON専用モードの利点：
+- **データサイズ**: JSON比で約20-40%削減
+- **パース速度**: バイナリ処理による高速化
+- **メモリ使用量**: 効率的なバイナリ表現
