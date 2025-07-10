@@ -107,6 +107,7 @@ services:
       dockerfile: Dockerfile.client
     environment:
       - ROSBRIDGE_URL=ws://rosbridge-server:9090
+      - ROSBRIDGE_URL_BSON=ws://rosbridge-server-bson:9090
       - RESULTS_DIR=/results
     volumes:
       - ./client:/workspace:ro
@@ -118,6 +119,7 @@ services:
       "
     depends_on:
       - rosbridge-server
+      - rosbridge-server-bson
     networks:
       - ros-network
 

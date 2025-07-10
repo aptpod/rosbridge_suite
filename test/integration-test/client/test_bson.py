@@ -9,7 +9,7 @@ from datetime import datetime
 import websocket
 from bson import decode, encode
 
-ROSBRIDGE_URL = os.environ.get("ROSBRIDGE_URL", "ws://localhost:9090")
+ROSBRIDGE_URL = os.environ.get("ROSBRIDGE_URL_BSON", "ws://localhost:9091")
 RESULTS_DIR = os.environ.get("RESULTS_DIR", "/results")
 
 print("Starting BSON mode test...")
