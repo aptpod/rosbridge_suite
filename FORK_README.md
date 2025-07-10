@@ -94,10 +94,21 @@ ros2 pkg list | grep rosbridge
 **サーバー起動**:
 ```bash
 source /opt/ros/humble/setup.bash
+
+# 標準モード（JSON）
 ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+
+# またはJSONモードを明示的に指定
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=false
+
+# BSON専用モード
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=true
 ```
 
-WebSocketサーバーは`ws://localhost:9090`でBSONサポート有効状態で利用可能になります。
+WebSocketサーバーは`ws://localhost:9090`で利用可能になります。
+
+- **標準モード**: JSON対応（デフォルト）
+- **BSON専用モード**: BSONのみ対応、最高性能
 
 ### 開発者向け
 
