@@ -73,6 +73,11 @@ jobs:
           # Then run the test
           docker compose up --abort-on-container-exit test-client
           
+          # Show container logs if test fails
+          echo "📝 Container logs:"
+          docker compose logs rosbridge-server || true
+          docker compose logs test-client || true
+          
           # Check test results
           if [ -f results/test-summary.json ]; then
             echo "📊 Test summary:"

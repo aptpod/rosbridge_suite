@@ -140,10 +140,13 @@ class ROSBridgeBSONTest:
     def on_error(self, ws, error):
         """Handle WebSocket errors"""
         print(f'WebSocket error: {error}')
+        print(f'Error type: {type(error)}')
+        print(f'WebSocket URL: {ROSBRIDGE_URL}')
         self.results['tests'].append({
             'test': 'connection_bson',
             'status': 'error',
-            'error': str(error)
+            'error': str(error),
+            'error_type': str(type(error))
         })
 
     def on_close(self, ws, close_status_code, close_msg):
@@ -173,6 +176,8 @@ class ROSBridgeBSONTest:
     def on_open(self, ws):
         """Handle WebSocket connection open"""
         print('Connected to rosbridge server (BSON mode)')
+        print(f'Connected to: {ROSBRIDGE_URL}')
+        print('Starting BSON message sending...')
         
         def send_subscriptions():
             # Test 1: Subscribe to chatter topic
