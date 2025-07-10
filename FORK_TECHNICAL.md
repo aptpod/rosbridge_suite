@@ -319,7 +319,7 @@ GitHub Actionsは以下の条件で実行されます：
 ## システムアーキテクチャー
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#e1f5fe', 'primaryTextColor': '#000000', 'primaryBorderColor': '#1976d2', 'lineColor': '#000000', 'secondaryColor': '#ffecb3', 'tertiaryColor': '#fff9c4', 'background': '#ffffff', 'mainBkg': '#ffffff', 'secondaryBkg': '#f5f5f5', 'tertiaryBkg': '#fafafa'}}}%%
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#e1f5fe', 'primaryTextColor': '#000000', 'primaryBorderColor': '#1976d2', 'lineColor': '#1976d2', 'secondaryColor': '#ffecb3', 'tertiaryColor': '#fff9c4', 'background': '#ffffff', 'mainBkg': '#ffffff', 'secondaryBkg': '#f5f5f5', 'tertiaryBkg': '#fafafa'}}}%%
 graph TD
     %% ソースコード (aptpod Fork版)
     subgraph src ["ソースコード (aptpod Fork版)"]
