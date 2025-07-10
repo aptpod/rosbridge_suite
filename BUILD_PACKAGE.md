@@ -12,6 +12,8 @@
 
 Dockerを使用してクリーンな環境でDebianパッケージをビルドし、`apt install`でインストール可能な単一パッケージを生成します。
 
+**GitHub Release機能**: タグをpushすることで、自動的にGitHub Releaseが作成され、アーキテクチャ別のzipファイルが配布されます。詳細は[GitHub Release の自動作成](#github-release-の自動作成)セクションを参照してください。
+
 ## サポートアーキテクチャ
 
 公式ros-humble-rosbridge-suiteのサポート状況に合わせて、以下のアーキテクチャをサポートします：
@@ -257,6 +259,81 @@ docker run --rm -v "$(pwd):/source:ro" -v "$(pwd)/debian-packages:/output" rosbr
 ./build-deb.sh --list
 ```
 
+## GitHub Release の自動作成
+
+### 概要
+
+このプロジェクトでは、タグをpushすることで自動的にGitHub Releaseが作成され、アーキテクチャ別のzipファイルが配布されます。
+
+### 使用方法
+
+```bash
+# タグを作成してpush（例：ベータ版）
+git tag humble-2.0.1+aptpod0.0.1-beta.1
+git push origin humble-2.0.1+aptpod0.0.1-beta.1
+
+# タグを作成してpush（例：正式版）
+git tag humble-2.0.1+aptpod0.0.1
+git push origin humble-2.0.1+aptpod0.0.1
+```
+
+### 自動生成される配布物
+
+タグpush後、GitHub Actionsが以下を自動生成します：
+
+1. **GitHub Release**: タグに基づいたリリースページ
+2. **配布用zipファイル**:
+   - `rosbridge-suite-amd64.zip` - x86_64 Linux向け
+   - `rosbridge-suite-arm64.zip` - ARM64 Linux向け
+3. **詳細なリリースノート**: インストール手順、対応アーキテクチャ、機能説明
+
+### zipファイルの構成
+
+各zipファイルには以下が含まれます：
+- `ros-humble-rosbridge-suite_<arch>.deb` - Debianパッケージ
+- `INSTALL.md` - インストール手順
+
+### ビルド時間
+
+- **amd64**: 約5-10分
+- **arm64**: 約30-60分（QEMUエミュレーション使用）
+
+### ダウンロードとインストール
+
+```bash
+# 1. GitHubのReleaseページからzipファイルをダウンロード
+# 2. zipファイルを展開
+unzip rosbridge-suite-amd64.zip
+
+# 3. 依存関係をインストール
+sudo apt update
+sudo apt install -y python3-twisted python3-tornado python3-autobahn python3-pymongo python3-pil
+
+# 4. パッケージをインストール
+sudo dpkg -i ros-humble-rosbridge-suite_*.deb
+
+# 5. 使用開始
+source /opt/ros/humble/setup.bash
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+```
+
+### 対応タグパターン
+
+- **全てのタグ**: 任意のタグ名でReleaseが作成されます
+- **推奨パターン**: `humble-<version>+aptpod<version>[-prerelease]`
+  - 例: `humble-2.0.1+aptpod0.0.1`
+  - 例: `humble-2.0.1+aptpod0.0.1-beta.1`
+
+### GitHub Actions ワークフロー
+
+GitHub Actionsは以下の条件で実行されます：
+
+| トリガー | artifact保存期間 | Release作成 |
+|----------|-----------------|-------------|
+| **ブランチpush** | 1日 | なし |
+| **Pull Request** | 1日 | なし |
+| **タグpush** | 1日 | **あり** |
+
 ## システムアーキテクチャー
 
 ```plantuml
@@ -440,6 +517,9 @@ BSON対応は`rosbridge_server/src/rosbridge_server/websocket_handler.py`に実�
 - ✅ 標準的なROS 2パッケージ構造
 - ✅ 完全なパッケージ発見機能
 - ✅ 共有ライブラリ統合
+- ✅ **GitHub Release自動作成機能**
+- ✅ **アーキテクチャ別zipファイル配布**
+- ✅ **GitHub Actions CI/CD統合**
 
 ## 注意事項
 
