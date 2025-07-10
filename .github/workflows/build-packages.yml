@@ -6,9 +6,9 @@ on:
     # Trigger on all branch pushes
     branches:
       - '**'
-    # Also trigger on version tags for releases
+    # Also trigger on all tags for releases
     tags:
-      - 'v*'
+      - '*'
   pull_request:
 
   # Trigger after CI workflow completes successfully (temporarily commented out)
