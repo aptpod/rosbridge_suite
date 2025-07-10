@@ -167,7 +167,7 @@ class RosbridgeWebSocket(WebSocketHandler):
                 try:
                     # Try to parse as BSON first
                     import bson
-                    bson_msg = bson.BSON(message)
+                    bson.BSON(message)  # Validate it's valid BSON
                     # If BSON parsing succeeds, it's BSON data
                     self.incoming_queue.push(message)
                 except Exception:
@@ -177,7 +177,7 @@ class RosbridgeWebSocket(WebSocketHandler):
                         self.incoming_queue.push(decoded_message)
                     except UnicodeDecodeError:
                         # If both fail, log error and ignore
-                        self.node_handle.get_logger().error(f"Unable to decode binary message as BSON or UTF-8")
+                        self.node_handle.get_logger().error("Unable to decode binary message as BSON or UTF-8")
         else:
             self.incoming_queue.push(message)
 
