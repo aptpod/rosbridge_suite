@@ -158,30 +158,12 @@ class RosbridgeWebSocket(WebSocketHandler):
 
     @log_exceptions
     def on_message(self, message):
-        if isinstance(message, bytes):
-            if self.__class__.bson_only_mode:
-                # BSON ONLY MODE: push binary directly
-                self.incoming_queue.push(message)
-            else:
-                # HYBRID MODE: Try to detect if this is BSON first
-                try:
-                    # Try to parse as BSON first
-                    import bson
-
-                    bson.BSON(message)  # Validate it's valid BSON
-                    # If BSON parsing succeeds, it's BSON data
-                    self.incoming_queue.push(message)
-                except Exception:
-                    # If BSON parsing fails, try UTF-8 JSON
-                    try:
-                        decoded_message = message.decode("utf-8")
-                        self.incoming_queue.push(decoded_message)
-                    except UnicodeDecodeError:
-                        # If both fail, log error and ignore
-                        self.__class__.node_handle.get_logger().error(
-                            "Unable to decode binary message as BSON or UTF-8"
-                        )
+        if self.__class__.bson_only_mode and isinstance(message, bytes):
+            # BSON ONLY MODE: push binary directly
+            self.incoming_queue.push(message)
         else:
+            if isinstance(message, bytes):
+                message = message.decode("utf-8")
             self.incoming_queue.push(message)
 
     @log_exceptions
