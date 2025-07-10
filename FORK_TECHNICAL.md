@@ -370,35 +370,35 @@ graph TD
         
         GR --> debs
     end
-    
+
     %% エンドユーザー環境
     subgraph install ["エンドユーザー環境"]
         D["Download & Unzip"]
         P["dpkg -i<br/>ros-humble-rosbridge-<br/>suite_*.deb"]
         R["ROS 2 Humble<br/>Environment"]
         S["rosbridge WebSocket<br/>Server (BSON対応)"]
-        
+
         D --> P
         P --> R
         R --> S
     end
-    
+
     %% 実行時アーキテクチャ
     subgraph runtime ["実行時アーキテクチャ"]
         WS["Rosbridge Server<br/>ws://9090"]
         WC["Webクライアント<br/>(JSON/BSON)"]
         ROS2["ROS 2 Topics/Services"]
-        
+
         WC <--> WS
         WS <--> ROS2
     end
-    
+
     %% 全体の接続
     src --> build
     J --> GR
     debs --> D
     S --> WS
-    
+
     %% スタイル定義
     classDef source fill:#e1f5fe
     classDef server fill:#ffecb3
@@ -411,7 +411,7 @@ graph TD
     classDef packages fill:#c8e6c9
     classDef unsupported fill:#ffcdd2
     classDef ros fill:#e8f5e8
-    
+
     class A source
     class C server
     class BSON,S,WS bson
