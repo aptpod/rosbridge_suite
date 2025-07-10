@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # Base ROS 2 Humble environment
+  ros-master:
+    image: ros:humble
+    environment:
+      - ROS_DOMAIN_ID=42
+    command: /bin/bash -c "source /opt/ros/humble/setup.bash && sleep infinity"
+    networks:
+      - ros-network
+
+  # Chatter talker node
+  chatter-talker:
+    image: ros:humble
+    environment:
+      - ROS_DOMAIN_ID=42
+    command: >
+      /bin/bash -c "
+        source /opt/ros/humble/setup.bash &&
+        apt-get update &&
+        apt-get install -y ros-humble-demo-nodes-cpp &&
+        ros2 run demo_nodes_cpp talker
+      "
+    depends_on:
+      - ros-master
+    networks:
+      - ros-network
+
+  # PointCloud2 publisher node
+  pointcloud2-publisher:
+    image: ros:humble
+    environment:
+      - ROS_DOMAIN_ID=42
+    volumes:
+      - ./scripts:/workspace/scripts:ro
+    command: >
+      /bin/bash -c "
+        source /opt/ros/humble/setup.bash &&
+        apt-get update &&
+        apt-get install -y python3-numpy ros-humble-sensor-msgs &&
+        python3 /workspace/scripts/pointcloud2_publisher.py
+      "
+    depends_on:
+      - ros-master
+    networks:
+      - ros-network
+
+
+  # Rosbridge server with BSON support
+  rosbridge-server:
+    build:
+      context: ../..
+      dockerfile: test/integration-test/Dockerfile.rosbridge
+    environment:
+      - ROS_DOMAIN_ID=42
+      - BSON_ONLY_MODE=false  # Change to true for BSON-only mode
+    ports:
+      - "9090:9090"
+    depends_on:
+      - ros-master
+      - chatter-talker
+      - pointcloud2-publisher
+    networks:
+      - ros-network
+
+  # Test client for JSON/BSON testing
+  test-client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    environment:
+      - ROSBRIDGE_URL=ws://rosbridge-server:9090
+      - RESULTS_DIR=/results
+    volumes:
+      - ./client:/workspace:ro
+      - ./results:/results
+    command: >
+      /bin/bash -c "
+        sleep 10 &&
+        python3 test_all.py
+      "
+    depends_on:
+      - rosbridge-server
+    networks:
+      - ros-network
+
+networks:
+  ros-network:
+    driver: bridge

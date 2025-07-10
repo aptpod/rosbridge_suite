@@ -36,3 +36,99 @@ jobs:
       - uses: ros-tooling/action-ros-ci@v0.4
         with:
           target-ros2-distro: ${{ matrix.ros }}
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Debian package for integration test
+        run: |
+          echo "Building Debian package for integration tests"
+          ./build-deb.sh amd64
+
+      - name: Run integration tests
+        timeout-minutes: 15
+        run: |
+          echo "Running integration tests..."
+          cd test/integration-test
+          
+          # Clean up any previous results
+          rm -rf results/*.json
+          
+          # Start the test environment and run tests
+          echo "🚀 Starting integration test environment..."
+          docker compose up --build --abort-on-container-exit test-client
+          
+          # Check test results
+          if [ -f results/test-summary.json ]; then
+            echo "📊 Test summary:"
+            cat results/test-summary.json
+            echo ""
+            
+            # List all result files
+            echo "📁 Generated test files:"
+            ls -la results/
+            echo ""
+            
+            # Check if tests passed
+            if grep -q '"overall_status": "PASSED"' results/test-summary.json; then
+              echo "✅ Integration tests PASSED"
+              
+              # Show individual test results
+              echo "📋 Individual test results:"
+              for file in results/test-results-*.json; do
+                if [ -f "$file" ]; then
+                  echo "  - $(basename "$file"):"
+                  jq -r '.mode + " mode: " + .overall_status' "$file" 2>/dev/null || echo "    Unable to parse"
+                fi
+              done
+              
+              exit 0
+            else
+              echo "❌ Integration tests FAILED"
+              
+              # Show failure details
+              echo "🔍 Failure details:"
+              for file in results/test-results-*.json; do
+                if [ -f "$file" ]; then
+                  echo "  - $(basename "$file"):"
+                  jq -r '.mode + " mode: " + (.overall_status // "UNKNOWN")' "$file" 2>/dev/null || echo "    Unable to parse"
+                fi
+              done
+              
+              exit 1
+            fi
+          else
+            echo "❌ No test results found"
+            echo "🔍 Container logs:"
+            docker compose logs test-client | tail -50
+            exit 1
+          fi
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: test/integration-test/results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload test logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-logs
+          path: |
+            test/integration-test/results/
+          retention-days: 7
+          if-no-files-found: ignore

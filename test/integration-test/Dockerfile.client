@@ -1,0 +1,17 @@
+FROM python:3.11-slim
+
+WORKDIR /workspace
+
+# Install Python dependencies
+RUN pip install websocket-client pymongo
+
+# Copy test files
+COPY client/ .
+
+# Create results directory
+RUN mkdir -p /results
+
+# Make Python scripts executable
+RUN chmod +x *.py
+
+CMD ["python3", "test_all.py"]

@@ -1,0 +1,28 @@
+FROM ros:humble
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    python3-twisted \
+    python3-tornado \
+    python3-autobahn \
+    python3-pymongo \
+    python3-pil \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create workspace
+WORKDIR /workspace
+
+# Copy debian package (context is from project root)
+COPY debian-packages/ros-humble-rosbridge-suite_*.deb /tmp/
+
+# Install rosbridge package
+RUN dpkg -i /tmp/ros-humble-rosbridge-suite_*.deb || apt-get install -f -y
+
+# Expose WebSocket port
+EXPOSE 9090
+
+# Setup entrypoint (context is from project root)
+COPY test/integration-test/scripts/rosbridge-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
