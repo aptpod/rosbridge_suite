@@ -318,103 +318,109 @@ GitHub Actionsは以下の条件で実行されます：
 
 ## システムアーキテクチャー
 
-```plantuml
-@startuml
-!theme plain
-skinparam backgroundColor white
-skinparam defaultFontSize 10
-skinparam componentStyle uml2
-top to bottom direction
-
-package "ソースコード (aptpod Fork版)" as src {
-    component "rosbridge_suite/" as A #e1f5fe
-    component "rosbridge_library/" as B
-    component "rosbridge_server/" as C #ffecb3
-    component "rosapi/" as API
-    component "rosbridge_msgs/" as E
-    component "rosbridge_test_msgs/" as F
-    note as BSON #fff9c4
-        BSON serialization
-        aptpod patch
-        高速バイナリ処理
-    end note
-
-    A --> B
-    A --> C
-    A --> API
-    A --> E
-    A --> F
-    C .. BSON : aptpod enhancement
-}
-
-package "CI/CD・ビルドプロセス" as build {
-    component "GitHub Actions" as GA #e3f2fd
-    component "Tag Push\n(v*)" as TP #fff3e0
-    component "Docker Multi-Arch\nBuild" as H #fff3e0
-    component "amd64 Build\n(native)" as I1 #c8e6c9
-    component "arm64 Build\n(QEMU)" as I2 #ffcdd2
-    component "colcon build\nROS 2 Humble" as I
-    component "Debian Package\nCreation" as J
-
-    TP --> GA
-    GA --> H
-    H --> I1
-    H --> I2
-    I1 --> I
-    I2 --> I
-    I --> J
-}
-
-package "GitHub Release配布" as output {
-    component "GitHub Release" as GR #f3e5f5
-
-    package "アーキテクチャ別パッケージ" as debs {
-        component "rosbridge-suite-amd64.zip" as L1 #c8e6c9
-        component "rosbridge-suite-arm64.zip" as L2 #c8e6c9
-        note as NOARMHF #ffcdd2
-            armhf非対応
-            公式ROSパッケージなし
-        end note
-    }
-
-    GR --> debs
-}
-
-package "エンドユーザー環境" as install {
-    component "Download & Unzip" as D
-    component "dpkg -i ros-humble-rosbridge-suite_*.deb" as P
-    component "ROS 2 Humble\nEnvironment" as R #e8f5e8
-    component "rosbridge WebSocket\nServer (BSON対応)" as S #fff9c4
-
-    D --> P
-    P --> R
-    R --> S
-}
-
-package "実行時アーキテクチャ" as runtime {
-    component "Rosbridge Server\nws://9090" as WS #fff9c4
-    component "Webクライアント\n(JSON/BSON)" as WC
-    component "ROS 2 Topics/Services" as ROS2
-
-    WC <--> WS
-    WS <--> ROS2
+```mermaid
+graph TD
+    %% ソースコード (aptpod Fork版)
+    subgraph src ["ソースコード (aptpod Fork版)"]
+        A["rosbridge_suite/"]
+        B["rosbridge_library/"]
+        C["rosbridge_server/"]
+        API["rosapi/"]
+        E["rosbridge_msgs/"]
+        F["rosbridge_test_msgs/"]
+        BSON["BSON serialization<br/>aptpod patch<br/>高速バイナリ処理"]
+        
+        A --> B
+        A --> C
+        A --> API
+        A --> E
+        A --> F
+        C -.- BSON
+    end
     
-    WS -[hidden]down-> WC
-    WS -[hidden]down-> ROS2
-}
-
-src --> build
-J --> GR
-debs --> D
-S --> WS
-
-' レイアウト指定
-src -[hidden]down-> build
-build -[hidden]down-> output
-output -[hidden]down-> install
-install -[hidden]down-> runtime
-
-@enduml
+    %% CI/CD・ビルドプロセス
+    subgraph build ["CI/CD・ビルドプロセス"]
+        GA["GitHub Actions"]
+        TP["Tag Push<br/>(v*)"]
+        H["Docker Multi-Arch<br/>Build"]
+        I1["amd64 Build<br/>(native)"]
+        I2["arm64 Build<br/>(QEMU)"]
+        I["colcon build<br/>ROS 2 Humble"]
+        J["Debian Package<br/>Creation"]
+        
+        TP --> GA
+        GA --> H
+        H --> I1
+        H --> I2
+        I1 --> I
+        I2 --> I
+        I --> J
+    end
+    
+    %% GitHub Release配布
+    subgraph output ["GitHub Release配布"]
+        GR["GitHub Release"]
+        
+        subgraph debs ["アーキテクチャ別パッケージ"]
+            L1["rosbridge-suite-amd64.zip"]
+            L2["rosbridge-suite-arm64.zip"]
+            NOARMHF["❌ armhf非対応<br/>公式ROSパッケージなし"]
+        end
+        
+        GR --> debs
+    end
+    
+    %% エンドユーザー環境
+    subgraph install ["エンドユーザー環境"]
+        D["Download & Unzip"]
+        P["dpkg -i<br/>ros-humble-rosbridge-<br/>suite_*.deb"]
+        R["ROS 2 Humble<br/>Environment"]
+        S["rosbridge WebSocket<br/>Server (BSON対応)"]
+        
+        D --> P
+        P --> R
+        R --> S
+    end
+    
+    %% 実行時アーキテクチャ
+    subgraph runtime ["実行時アーキテクチャ"]
+        WS["Rosbridge Server<br/>ws://9090"]
+        WC["Webクライアント<br/>(JSON/BSON)"]
+        ROS2["ROS 2 Topics/Services"]
+        
+        WC <--> WS
+        WS <--> ROS2
+    end
+    
+    %% 全体の接続
+    src --> build
+    J --> GR
+    debs --> D
+    S --> WS
+    
+    %% スタイル定義
+    classDef source fill:#e1f5fe
+    classDef server fill:#ffecb3
+    classDef bson fill:#fff9c4
+    classDef actions fill:#e3f2fd
+    classDef build fill:#fff3e0
+    classDef buildNative fill:#c8e6c9
+    classDef buildArm fill:#ffcdd2
+    classDef release fill:#f3e5f5
+    classDef packages fill:#c8e6c9
+    classDef unsupported fill:#ffcdd2
+    classDef ros fill:#e8f5e8
+    
+    class A source
+    class C server
+    class BSON,S,WS bson
+    class GA actions
+    class TP,H build
+    class I1,L1,L2 buildNative
+    class I2 buildArm
+    class GR release
+    class NOARMHF unsupported
+    class R ros
 ```
 
 ## dpkg コマンドの使用方法
