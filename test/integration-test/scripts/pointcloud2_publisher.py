@@ -28,23 +28,23 @@ class PointCloud2Publisher(Node):
         
         # Define fields
         msg.fields = [
-            PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
-            PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
-            PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
+            PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
+            PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),
+            PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1),
         ]
-        
+
         msg.is_bigendian = False
         msg.point_step = 12  # 3 * 4 bytes
         msg.row_step = msg.point_step * num_points
         msg.is_dense = True
         msg.width = num_points
         msg.height = 1
-        
+
         # Pack data
         msg.data = points.tobytes()
-        
+
         self.publisher_.publish(msg)
-        self.get_logger().info(f'Publishing PointCloud2: {num_points} points (count: {self.count})')
+        self.get_logger().info(f"Publishing PointCloud2: {num_points} points (count: {self.count})")
         self.count += 1
 
 
@@ -56,5 +56,5 @@ def main(args=None):
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
