@@ -44,8 +44,27 @@ services:
     networks:
       - ros-network
 
+  # Echo service nodes for testing
+  echo-services:
+    image: ros:humble
+    environment:
+      - ROS_DOMAIN_ID=42
+    volumes:
+      - ./scripts:/workspace/scripts:ro
+    command: >
+      /bin/bash -c "
+        source /opt/ros/humble/setup.bash &&
+        apt-get update &&
+        apt-get install -y ros-humble-example-interfaces ros-humble-std-srvs &&
+        python3 /workspace/scripts/echo_services.py
+      "
+    depends_on:
+      - ros-master
+    networks:
+      - ros-network
 
-  # Rosbridge server with BSON support
+
+  # Rosbridge server with BSON support (Hybrid mode)
   rosbridge-server:
     build:
       context: ../..
@@ -59,6 +78,25 @@ services:
       - ros-master
       - chatter-talker
       - pointcloud2-publisher
+      - echo-services
+    networks:
+      - ros-network
+
+  # Rosbridge server in BSON-only mode for testing
+  rosbridge-server-bson:
+    build:
+      context: ../..
+      dockerfile: test/integration-test/Dockerfile.rosbridge
+    environment:
+      - ROS_DOMAIN_ID=42
+      - BSON_ONLY_MODE=true  # BSON-only mode
+    ports:
+      - "9091:9090"
+    depends_on:
+      - ros-master
+      - chatter-talker
+      - pointcloud2-publisher
+      - echo-services
     networks:
       - ros-network
 

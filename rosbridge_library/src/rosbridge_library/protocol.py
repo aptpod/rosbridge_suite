@@ -336,7 +336,7 @@ class Protocol:
                     except Exception:
                         # If BSON fails, try to decode as UTF-8 JSON
                         try:
-                            return json.loads(msg.decode('utf-8'))
+                            return json.loads(msg.decode("utf-8"))
                         except Exception:
                             raise ValueError("Unable to deserialize binary message as BSON or JSON")
                 else:

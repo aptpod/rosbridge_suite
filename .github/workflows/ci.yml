@@ -59,42 +59,42 @@ jobs:
         timeout-minutes: 15
         run: |
           echo "Running integration tests..."
-          
+
           # Clean up any previous results
           rm -rf test/integration-test/results/*.json
-          
+
           # Start the test environment and run tests from root directory
           echo "🚀 Starting integration test environment..."
           cd test/integration-test
-          
+
           # Build all services first
           docker compose build
-          
+
           # Then run the test
           docker compose up --abort-on-container-exit test-client
-          
+
           # Show container logs if test fails
           echo "📝 Container logs:"
           echo "=== Rosbridge Server Logs ==="
           docker compose logs rosbridge-server || true
           echo "=== Test Client Logs (last 100 lines) ==="
           docker compose logs --tail=100 test-client || true
-          
+
           # Check test results
           if [ -f results/test-summary.json ]; then
             echo "📊 Test summary:"
             cat results/test-summary.json
             echo ""
-            
+
             # List all result files
             echo "📁 Generated test files:"
             ls -la results/
             echo ""
-            
+
             # Check if tests passed
             if grep -q '"overall_status": "PASSED"' results/test-summary.json; then
               echo "✅ Integration tests PASSED"
-              
+
               # Show individual test results
               echo "📋 Individual test results:"
               for file in results/test-results-*.json; do
@@ -103,11 +103,11 @@ jobs:
                   jq -r '.mode + " mode: " + .overall_status' "$file" 2>/dev/null || echo "    Unable to parse"
                 fi
               done
-              
+
               exit 0
             else
               echo "❌ Integration tests FAILED"
-              
+
               # Show failure details
               echo "🔍 Failure details:"
               for file in results/test-results-*.json; do
@@ -116,7 +116,7 @@ jobs:
                   jq -r '.mode + " mode: " + (.overall_status // "UNKNOWN")' "$file" 2>/dev/null || echo "    Unable to parse"
                 fi
               done
-              
+
               exit 1
             fi
           else

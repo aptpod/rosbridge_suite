@@ -239,10 +239,10 @@ jobs:
 
           # Use the package
           source /opt/ros/humble/setup.bash
-          
+
           # Standard mode (JSON + BSON support)
           ros2 launch rosbridge_server rosbridge_websocket_launch.xml
-          
+
           # Or BSON-only mode for better performance
           ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=true
           ```

@@ -13,6 +13,7 @@ print("Running all integration tests...")
 RESULTS_DIR = os.environ.get("RESULTS_DIR", "/results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
+
 def run_test(script_name):
     """Run a Python test script and return success status"""
     print(f"\n========== Running {script_name} ==========")

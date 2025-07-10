@@ -300,7 +300,7 @@ graph TD
         E["rosbridge_msgs/"]
         F["rosbridge_test_msgs/"]
         BSON["BSON serialization<br/>aptpod patch<br/>高速バイナリ処理"]
-        
+
         A --> B
         A --> C
         A --> API
@@ -308,7 +308,7 @@ graph TD
         A --> F
         C -.- BSON
     end
-    
+
     %% CI/CD・ビルドプロセス
     subgraph build ["CI/CD・ビルドプロセス"]
         GA["GitHub Actions"]
@@ -318,7 +318,7 @@ graph TD
         I2["arm64 Build<br/>(QEMU)"]
         I["colcon build<br/>ROS 2 Humble"]
         J["Debian Package<br/>Creation"]
-        
+
         TP --> GA
         GA --> H
         H --> I1
@@ -327,16 +327,16 @@ graph TD
         I2 --> I
         I --> J
     end
-    
+
     %% GitHub Release配布
     subgraph output ["GitHub Release配布"]
         GR["GitHub Release"]
-        
+
         subgraph debs ["配布パッケージ"]
             L1["rosbridge-suite-<br/>{tag}-amd64.zip"]
             L2["rosbridge-suite-<br/>{tag}-arm64.zip"]
         end
-        
+
         GR --> debs
     end
 
