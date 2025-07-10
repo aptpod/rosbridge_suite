@@ -153,7 +153,12 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "# Use the package" >> $GITHUB_STEP_SUMMARY
         echo "source /opt/ros/humble/setup.bash" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# Standard mode (JSON + BSON support)" >> $GITHUB_STEP_SUMMARY
         echo "ros2 launch rosbridge_server rosbridge_websocket_launch.xml" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# Or BSON-only mode for better performance" >> $GITHUB_STEP_SUMMARY
+        echo "ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=true" >> $GITHUB_STEP_SUMMARY
         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
     - name: List all artifacts
@@ -175,19 +180,24 @@ jobs:
       with:
         path: artifacts/
 
+    - name: Extract tag name
+      id: tag
+      run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
     - name: Create release packages
       run: |
         mkdir -p release/
+        TAG_NAME="${{ steps.tag.outputs.tag }}"
 
-        # Create zip files for each architecture
+        # Create zip files for each architecture with tag name
         for arch in amd64 arm64; do
           if [ -d "artifacts/debian-packages-$arch" ]; then
-            echo "Creating zip for $arch..."
+            echo "Creating zip for $arch with tag $TAG_NAME..."
             cd artifacts/debian-packages-$arch
-            zip -r "../../release/rosbridge-suite-$arch.zip" .
+            zip -r "../../release/rosbridge-suite-$TAG_NAME-$arch.zip" .
             cd ../..
-            echo "Created: release/rosbridge-suite-$arch.zip"
-            ls -la "release/rosbridge-suite-$arch.zip"
+            echo "Created: release/rosbridge-suite-$TAG_NAME-$arch.zip"
+            ls -la "release/rosbridge-suite-$TAG_NAME-$arch.zip"
           else
             echo "Warning: No artifacts found for $arch"
           fi
@@ -195,10 +205,6 @@ jobs:
 
         echo "Release packages created:"
         ls -la release/
-
-    - name: Extract tag name
-      id: tag
-      run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
     - name: Create Release
       uses: actions/create-release@v1
@@ -233,7 +239,12 @@ jobs:
 
           # Use the package
           source /opt/ros/humble/setup.bash
+          
+          # Standard mode (JSON + BSON support)
           ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+          
+          # Or BSON-only mode for better performance
+          ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=true
           ```
 
           ### What's Included
@@ -243,28 +254,33 @@ jobs:
           - All necessary message definitions
           - Installation documentation (INSTALL.md)
 
+          ### BSON Mode
+          This package supports both JSON and BSON serialization:
+          - **Standard mode**: Supports both JSON and BSON clients
+          - **BSON-only mode**: Better performance for binary data, BSON clients only
+
           The WebSocket server will be available at `ws://localhost:9090` with BSON support enabled.
         draft: false
         prerelease: false
 
     - name: Upload amd64 Release Asset
-      if: hashFiles('release/rosbridge-suite-amd64.zip') != ''
+      if: hashFiles('release/rosbridge-suite-*-amd64.zip') != ''
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./release/rosbridge-suite-amd64.zip
-        asset_name: rosbridge-suite-amd64.zip
+        asset_path: ./release/rosbridge-suite-${{ steps.tag.outputs.tag }}-amd64.zip
+        asset_name: rosbridge-suite-${{ steps.tag.outputs.tag }}-amd64.zip
         asset_content_type: application/zip
 
     - name: Upload arm64 Release Asset
-      if: hashFiles('release/rosbridge-suite-arm64.zip') != ''
+      if: hashFiles('release/rosbridge-suite-*-arm64.zip') != ''
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./release/rosbridge-suite-arm64.zip
-        asset_name: rosbridge-suite-arm64.zip
+        asset_path: ./release/rosbridge-suite-${{ steps.tag.outputs.tag }}-arm64.zip
+        asset_name: rosbridge-suite-${{ steps.tag.outputs.tag }}-arm64.zip
         asset_content_type: application/zip
