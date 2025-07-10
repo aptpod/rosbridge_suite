@@ -18,7 +18,9 @@ def run_test(script_name):
     print(f"\n========== Running {script_name} ==========")
 
     try:
-        result = subprocess.run([sys.executable, script_name], capture_output=False, text=True)  # nosec B603 - script_name is controlled
+        result = subprocess.run(
+            [sys.executable, script_name], capture_output=False, text=True
+        )  # nosec B603 - script_name is controlled
 
         print(f"\n{script_name} exited with code {result.returncode}")
         return result.returncode == 0
@@ -26,6 +28,7 @@ def run_test(script_name):
     except Exception as e:
         print(f"Error running {script_name}: {e}")
         return False
+
 
 def main():
     json_test_passed = False

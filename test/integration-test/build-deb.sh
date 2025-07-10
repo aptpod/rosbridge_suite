@@ -1,17 +1,16 @@
 #!/bin/bash
+
+# Build Debian package for integration tests
+# This is a simplified version that builds for the current architecture
+
 set -e
 
-# Script to build debian package for current architecture
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-
-echo "Building debian package for integration test..."
-echo "Project root: $PROJECT_ROOT"
-
-# Change to project root
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
-# Build for current architecture only
+# Ensure debian-packages directory exists
+mkdir -p debian-packages
+
 echo "Building for current architecture..."
 ./build-deb.sh
 
