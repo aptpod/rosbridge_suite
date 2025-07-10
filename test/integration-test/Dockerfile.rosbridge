@@ -1,6 +1,6 @@
 FROM ros:humble
 
-# Install dependencies
+# Install required packages
 RUN apt-get update && apt-get install -y \
     python3-twisted \
     python3-tornado \
@@ -9,13 +9,11 @@ RUN apt-get update && apt-get install -y \
     python3-pil \
     && rm -rf /var/lib/apt/lists/*
 
-# Create workspace
+# Set working directory
 WORKDIR /workspace
 
-# Copy debian package (context is from project root)
+# Copy and install the debian package (built in parent directory)
 COPY debian-packages/ros-humble-rosbridge-suite_*.deb /tmp/
-
-# Install rosbridge package
 RUN dpkg -i /tmp/ros-humble-rosbridge-suite_*.deb || apt-get install -f -y
 
 # Expose WebSocket port
