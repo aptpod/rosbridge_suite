@@ -66,7 +66,12 @@ jobs:
           # Start the test environment and run tests from root directory
           echo "🚀 Starting integration test environment..."
           cd test/integration-test
-          docker compose up --build --abort-on-container-exit test-client
+          
+          # Build all services first
+          docker compose build
+          
+          # Then run the test
+          docker compose up --abort-on-container-exit test-client
           
           # Check test results
           if [ -f results/test-summary.json ]; then
