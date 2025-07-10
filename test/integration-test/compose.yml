@@ -52,7 +52,7 @@ services:
       dockerfile: test/integration-test/Dockerfile.rosbridge
     environment:
       - ROS_DOMAIN_ID=42
-      - BSON_ONLY_MODE=false  # Change to true for BSON-only mode
+      - BSON_ONLY_MODE=false  # Hybrid mode - supports both JSON and BSON
     ports:
       - "9090:9090"
     depends_on:

@@ -318,7 +318,10 @@ class RosbridgeWebsocketNode(Node):
                 print("--params_glob argument provided without a value. (can be None or a list)")
                 sys.exit(-1)
 
-        if ("--bson_only_mode" in sys.argv) or bson_only_mode:
+        # Handle bson_only_mode parameter
+        if "--bson_only_mode" in sys.argv:
+            RosbridgeWebSocket.bson_only_mode = True
+        else:
             RosbridgeWebSocket.bson_only_mode = bson_only_mode
 
         # To be able to access the list of topics and services, you must be able to access the rosapi services.

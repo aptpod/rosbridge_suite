@@ -327,7 +327,21 @@ class Protocol:
                 bson_message = bson.BSON(msg)
                 return bson_message.decode()
             else:
-                return json.loads(msg)
+                # In hybrid mode, try to detect message type
+                if isinstance(msg, bytes):
+                    # Binary message - try BSON
+                    try:
+                        bson_message = bson.BSON(msg)
+                        return bson_message.decode()
+                    except Exception:
+                        # If BSON fails, try to decode as UTF-8 JSON
+                        try:
+                            return json.loads(msg.decode('utf-8'))
+                        except Exception:
+                            raise ValueError("Unable to deserialize binary message as BSON or JSON")
+                else:
+                    # Text message - parse as JSON
+                    return json.loads(msg)
         except Exception:
             # if we did try to deserialize whole buffer .. first try to let self.incoming check for multiple/partial json-decodes before logging error
             # .. this means, if buffer is not == msg --> we tried to decode part of buffer

@@ -62,13 +62,19 @@ class ROSBridgeBSONTest:
     def on_message(self, ws, message):
         """Handle incoming WebSocket messages"""
         try:
-            # In BSON mode, messages are binary
+            # In hybrid mode, we might receive both BSON and JSON responses
             if isinstance(message, bytes):
-                msg = decode(message)
+                try:
+                    msg = decode(message)
+                    print(f"Received BSON message: {len(message)} bytes")
+                except Exception as e:
+                    print(f"Failed to decode BSON message: {e}")
+                    return
             else:
                 # Fallback to JSON if not binary
                 import json
                 msg = json.loads(message)
+                print(f"Received JSON message: {len(message)} chars")
             
             if msg.get('topic') == '/chatter':
                 self.message_count['chatter'] += 1
