@@ -68,9 +68,7 @@ git push origin humble-2.0.1+aptpod0.0.1
 
 ### エンドユーザー向け（推奨）
 
-**GitHub Releasesからダウンロード**:
-
-リリース情報の詳細は[Releasesページ](https://github.com/aptpod/rosbridge_suite/releases)をご覧ください。
+[Releasesページ](https://github.com/aptpod/rosbridge_suite/releases)からダウンロードしてください。
 
 ### 自動生成される配布物
 
