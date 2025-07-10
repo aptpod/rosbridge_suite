@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
+import struct
+
+import numpy as np
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import PointCloud2, PointField
 from std_msgs.msg import Header
-import numpy as np
-import struct
 
 
 class PointCloud2Publisher(Node):
     def __init__(self):
-        super().__init__('pointcloud2_publisher')
-        self.publisher_ = self.create_publisher(PointCloud2, 'pointcloud', 10)
+        super().__init__("pointcloud2_publisher")
+        self.publisher_ = self.create_publisher(PointCloud2, "pointcloud", 10)
         timer_period = 1.0  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.count = 0
@@ -19,13 +20,13 @@ class PointCloud2Publisher(Node):
         # Create sample point cloud data
         num_points = 100
         points = np.random.rand(num_points, 3).astype(np.float32)
-        
+
         # Create PointCloud2 message
         msg = PointCloud2()
         msg.header = Header()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = "map"
-        
+
         # Define fields
         msg.fields = [
             PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
