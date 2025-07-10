@@ -187,7 +187,13 @@ class ROSBridgeBSONTest:
                 'topic': '/chatter',
                 'type': 'std_msgs/msg/String'
             }
-            ws.send(encode(subscribe_chatter), websocket.ABNF.OPCODE_BINARY)
+            try:
+                bson_data = encode(subscribe_chatter)
+                print(f'Sending BSON data: {len(bson_data)} bytes')
+                ws.send(bson_data, websocket.ABNF.OPCODE_BINARY)
+                print('BSON subscribe message sent successfully')
+            except Exception as e:
+                print(f'Error sending BSON message: {e}')
             
             # Test 2: Subscribe to pointcloud topic
             time.sleep(1)
@@ -225,6 +231,8 @@ class ROSBridgeBSONTest:
             time.sleep(15)
             if not self.test_completed and ws.sock and ws.sock.connected:
                 print('Test timeout reached, closing connection...')
+                print(f'Messages received - Chatter: {self.message_count["chatter"]}, PointCloud: {self.message_count["pointcloud"]}')
+                print(f'Validation status - Chatter: {self.validation_results["chatter"]}, PointCloud: {self.validation_results["pointcloud"]}')
                 if 'overall_status' not in self.results:
                     self.results['overall_status'] = 'TIMEOUT'
                 ws.close()

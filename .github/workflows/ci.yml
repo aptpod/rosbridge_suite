@@ -75,8 +75,10 @@ jobs:
           
           # Show container logs if test fails
           echo "📝 Container logs:"
+          echo "=== Rosbridge Server Logs ==="
           docker compose logs rosbridge-server || true
-          docker compose logs test-client || true
+          echo "=== Test Client Logs (last 100 lines) ==="
+          docker compose logs --tail=100 test-client || true
           
           # Check test results
           if [ -f results/test-summary.json ]; then
