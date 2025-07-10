@@ -1,18 +1,15 @@
-# ROS 2 Humble rosbridge_suite Debian パッケージビルド
+# ROS 2 Humble rosbridge_suite - Developer Build Guide
 
-このドキュメントは、BSON対応を追加したrosbridge_suiteの単一Debianパッケージをビルドする方法を説明します。
+このドキュメントは、開発者向けのローカルビルド手順とCI/CD技術詳細を説明します。
 
-## プロジェクトについて
+> **📖 一般ユーザーの方へ**: 事前ビルド済みパッケージをお探しの場合は、[FORK_README.md](FORK_README.md)をご覧ください。GitHub Releaseから簡単にインストールできます。
 
-- 本家の[rosbridge_suite](https://github.com/RobotWebTools/rosbridge_suite)からforkしたプロジェクトです
-- **ROS 2 Humble専用**のパッケージです（他のROSディストリビューションはサポートされていません）
-- rosbridge_serverにBSONシリアライゼーションサポートを追加したカスタム版です
+## 目的
 
-## 概要
-
-Dockerを使用してクリーンな環境でDebianパッケージをビルドし、`apt install`でインストール可能な単一パッケージを生成します。
-
-**GitHub Release機能**: タグをpushすることで、自動的にGitHub Releaseが作成され、アーキテクチャ別のzipファイルが配布されます。詳細は[GitHub Release の自動作成](#github-release-の自動作成)セクションを参照してください。
+- 開発・デバッグ用のローカルビルド環境構築
+- CI/CDシステムの理解と改良
+- カスタムパッチの適用と検証
+- マルチアーキテクチャビルドの技術詳細
 
 ## サポートアーキテクチャ
 
@@ -298,24 +295,9 @@ git push origin humble-2.0.1+aptpod0.0.1
 - **amd64**: 約5-10分
 - **arm64**: 約30-60分（QEMUエミュレーション使用）
 
-### ダウンロードとインストール
+### エンドユーザー向けインストール
 
-```bash
-# 1. GitHubのReleaseページからzipファイルをダウンロード
-# 2. zipファイルを展開
-unzip rosbridge-suite-amd64.zip
-
-# 3. 依存関係をインストール
-sudo apt update
-sudo apt install -y python3-twisted python3-tornado python3-autobahn python3-pymongo python3-pil
-
-# 4. パッケージをインストール
-sudo dpkg -i ros-humble-rosbridge-suite_*.deb
-
-# 5. 使用開始
-source /opt/ros/humble/setup.bash
-ros2 launch rosbridge_server rosbridge_websocket_launch.xml
-```
+エンドユーザー向けのインストール手順については、[FORK_README.md](FORK_README.md)の「📦 インストール・使用方法」セクションをご覧ください。
 
 ### 対応タグパターン
 
@@ -344,68 +326,93 @@ skinparam defaultFontSize 10
 skinparam componentStyle uml2
 top to bottom direction
 
-package "ソースコード (Fork版)" as src {
+package "ソースコード (aptpod Fork版)" as src {
     component "rosbridge_suite/" as A #e1f5fe
     component "rosbridge_library/" as B
     component "rosbridge_server/" as C #ffecb3
-    component "rosapi/" as D
+    component "rosapi/" as API
     component "rosbridge_msgs/" as E
     component "rosbridge_test_msgs/" as F
     note as BSON #fff9c4
         BSON serialization
-        Support patch
+        aptpod patch
+        高速バイナリ処理
     end note
 
     A --> B
     A --> C
-    A --> D
+    A --> API
     A --> E
     A --> F
-    C .. BSON : patch applied
+    C .. BSON : aptpod enhancement
 }
 
-package "ビルドプロセス" as build {
-    component "build-deb.sh" as G #fff3e0
-    component "Docker Container\nUbuntu 22.04" as H
+package "CI/CD・ビルドプロセス" as build {
+    component "GitHub Actions" as GA #e3f2fd
+    component "Tag Push\n(v*)" as TP #fff3e0
+    component "Docker Multi-Arch\nBuild" as H #fff3e0
+    component "amd64 Build\n(native)" as I1 #c8e6c9
+    component "arm64 Build\n(QEMU)" as I2 #ffcdd2
     component "colcon build\nROS 2 Humble" as I
     component "Debian Package\nCreation" as J
 
-    G --> H
-    H --> I
+    TP --> GA
+    GA --> H
+    H --> I1
+    H --> I2
+    I1 --> I
+    I2 --> I
     I --> J
 }
 
-package "出力パッケージ" as output {
-    component "debian-packages/" as K #f3e5f5
-    component "INSTALL.md" as O
+package "GitHub Release配布" as output {
+    component "GitHub Release" as GR #f3e5f5
 
-    package "debファイル群" as debs {
-        component "ros-humble-rosbridge-suite_amd64.deb" as L1
-        component "ros-humble-rosbridge-suite_arm64.deb" as L2
-        component "ros-humble-rosbridge-suite_armhf.deb" as L3
+    package "アーキテクチャ別パッケージ" as debs {
+        component "rosbridge-suite-amd64.zip" as L1 #c8e6c9
+        component "rosbridge-suite-arm64.zip" as L2 #c8e6c9
+        note as NOARMHF #ffcdd2
+            armhf非対応
+            公式ROSパッケージなし
+        end note
     }
 
-    K --> debs
-    K --> O
+    GR --> debs
 }
 
-package "インストール・利用 ROS 2 Humble" as install {
-    component "dpkg -i\nros-humble-rosbridge-suite_*.deb" as P
+package "エンドユーザー環境" as install {
+    component "Download & Unzip" as D
+    component "dpkg -i ros-humble-rosbridge-suite_*.deb" as P
     component "ROS 2 Humble\nEnvironment" as R #e8f5e8
-    component "rosbridge WebSocket Server" as S
+    component "rosbridge WebSocket\nServer (BSON対応)" as S #fff9c4
 
+    D --> P
     P --> R
     R --> S
 }
 
+package "実行時アーキテクチャ" as runtime {
+    component "Rosbridge Server\nws://9090" as WS #fff9c4
+    component "Webクライアント\n(JSON/BSON)" as WC
+    component "ROS 2 Topics/Services" as ROS2
+
+    WC <--> WS
+    WS <--> ROS2
+    
+    WS -[hidden]down-> WC
+    WS -[hidden]down-> ROS2
+}
+
 src --> build
-J --> K
-debs --> P
+J --> GR
+debs --> D
+S --> WS
 
 ' レイアウト指定
 src -[hidden]down-> build
 build -[hidden]down-> output
 output -[hidden]down-> install
+install -[hidden]down-> runtime
 
 @enduml
 ```
@@ -508,22 +515,3 @@ BSON対応は`rosbridge_server/src/rosbridge_server/websocket_handler.py`に実�
   - Pythonライブラリ: ~400KB
   - 共有ライブラリ(.so): ~250KB
   - 設定・メタデータ: ~100KB
-
-## 変更履歴
-
-### v2.0.1 (最新)
-- ✅ BSON serialization サポート追加
-- ✅ ROS 2 Humble対応
-- ✅ 標準的なROS 2パッケージ構造
-- ✅ 完全なパッケージ発見機能
-- ✅ 共有ライブラリ統合
-- ✅ **GitHub Release自動作成機能**
-- ✅ **アーキテクチャ別zipファイル配布**
-- ✅ **GitHub Actions CI/CD統合**
-
-## 注意事項
-
-- このビルド方法は、公式のROS 2リポジトリへのリリースとは異なります
-- ローカルまたはプライベートリポジトリでの使用を想定しています
-- 公式リリースには、bloom-releaseとros/rosdistroへのPRが必要です
-- **重要**: このパッケージは公式rosbridge_suiteと置き換えて使用してください
