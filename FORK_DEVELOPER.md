@@ -1,8 +1,8 @@
-# ROS 2 Humble rosbridge_suite - Developer Build Guide
+# ROS 2 Humble rosbridge_suite - Developer Guide
 
 このドキュメントは、開発者向けのローカルビルド手順とCI/CD技術詳細を説明します。
 
-> **📖 一般ユーザーの方へ**: 事前ビルド済みパッケージをお探しの場合は、[FORK_README.md](FORK_README.md)をご覧ください。GitHub Releaseから簡単にインストールできます。
+> **📖 注意**: 事前ビルド済みパッケージをお探しの場合は、[FORK_README.md](FORK_README.md)をご覧ください。
 
 ## 目的
 
@@ -11,23 +11,6 @@
 - カスタムパッチの適用と検証
 - マルチアーキテクチャビルドの技術詳細
 
-## サポートアーキテクチャ
-
-公式ros-humble-rosbridge-suiteのサポート状況に合わせて、以下のアーキテクチャをサポートします：
-
-| アーキテクチャ | サポート状況 | Tier | パッケージ形式 | 備考 |
-|---------|--------|------|----------|------|
-| **amd64** | ✅ 完全サポート | Tier 1 | バイナリパッケージ | 標準的なx86_64 Linux |
-| **arm64** | ✅ 完全サポート | Tier 1 | バイナリパッケージ | Raspberry Pi 4、Apple Silicon等 |
-| **armhf** | ❌ 非サポート | Tier 3 | ソースからビルド必要 | 公式ROSパッケージなし |
-
-### 参考：公式パッケージ
-
-ROS 2公式リポジトリ (`repo.ros2.org`) に存在するパッケージ：
-- `ros-humble-rosbridge-suite_2.0.1-1jammy.20250701.065406_amd64.deb`
-- `ros-humble-rosbridge-suite_2.0.1-1jammy.20250701.173947_arm64.deb`
-
-**armhfアーキテクチャはサポートしていません。**
 
 ## 必要な環境
 
@@ -47,7 +30,7 @@ ROS 2公式リポジトリ (`repo.ros2.org`) に存在するパッケージ：
 # 現在のアーキテクチャのみビルド（最も高速）
 ./build-deb.sh
 
-# 全サポートアーキテクチャビルド
+# 全アーキテクチャビルド
 ./build-deb.sh --all
 
 # 特定のアーキテクチャのみ
@@ -79,7 +62,7 @@ ROS 2公式リポジトリ (`repo.ros2.org`) に存在するパッケージ：
 
 ```bash
 cd debian-packages
-sudo apt install ./ros-humble-rosbridge-suite_*.deb
+sudo dpkg -i ros-humble-rosbridge-suite_*.deb
 ```
 
 これで、BSON対応を含むrosbridge_suite全体がインストールされます。
@@ -181,7 +164,7 @@ docker run --rm -v "$(pwd):/source:ro" -v "$(pwd)/debian-packages:/output" rosbr
 
 ### 全アーキテクチャ用ビルド
 
-サポートアーキテクチャ（amd64、arm64）用のパッケージを一括ビルド：
+amd64、arm64用のパッケージを一括ビルド：
 
 ```bash
 # 注意: QEMUエミュレーションが必要（時間がかかります）
@@ -193,7 +176,7 @@ docker run --rm -v "$(pwd):/source:ro" -v "$(pwd)/debian-packages:/output" rosbr
 ### 新しい機能
 
 ```bash
-# サポートアーキテクチャ一覧の表示
+# アーキテクチャ一覧の表示
 ./build-deb.sh --list
 
 # ビルド前のクリーンアップ
@@ -265,9 +248,11 @@ GitHub Actionsにより、以下の成果物が自動生成されます：
 - **amd64**: 約5-10分
 - **arm64**: 約30-60分（QEMUエミュレーション使用）
 
-### エンドユーザー向け配布
+### 配布
 
-エンドユーザー向けのダウンロード・インストール手順については、[FORK_README.md](FORK_README.md)の「📦 インストール・使用方法」セクションをご覧ください。GitHub Releasesから事前ビルド済みパッケージが入手できます。
+**エンドユーザー向け**: [FORK_README.md](FORK_README.md)の「📦 インストール・使用方法」セクションをご覧ください。GitHub Releasesから事前ビルド済みパッケージが入手できます。
+
+**開発者向け**: GitHub Actionsの"Build Debian Packages"のArtifactsからダウンロード可能です。プルリクエストやブランチのビルド結果を直接取得できます。
 
 ### 対応タグパターン
 
@@ -428,8 +413,11 @@ dpkg -c ros-humble-rosbridge-suite_*.deb
 ### 依存関係の解決
 
 ```bash
-# 依存関係エラーの修正
-sudo apt install -f
+# 依存関係エラーが発生した場合
+# 警告: apt install -f は使用しないでください（本家版に置き換わる可能性があります）
+# 代わりに、不足している依存パッケージを個別にインストールしてください
+sudo apt update
+sudo apt install python3-twisted python3-tornado python3-autobahn python3-pymongo python3-pil
 
 # 依存関係の確認
 dpkg -I ros-humble-rosbridge-suite_*.deb
@@ -591,6 +579,6 @@ integration-test:
 #### 性能比較
 
 BSON専用モードの利点：
-- **データサイズ**: JSON比で約20-40%削減
+- **データサイズ**: バイナリ形式による効率的なデータ表現
 - **パース速度**: バイナリ処理による高速化
 - **メモリ使用量**: 効率的なバイナリ表現
