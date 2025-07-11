@@ -37,10 +37,10 @@ def main():
 
     # Define all tests to run
     tests = [
-        "test_json_mode_json.py",   # JSON mode with JSON (should succeed)
+        "test_json_mode_json.py",  # JSON mode with JSON (should succeed)
         "test_json_mode_bson.py",  # JSON mode with BSON (should fail)
         "test_bson_mode_json.py",  # BSON mode with JSON (should fail)
-        "test_bson_mode_bson.py",   # BSON mode with BSON (should succeed)
+        "test_bson_mode_bson.py",  # BSON mode with BSON (should succeed)
     ]
 
     try:
@@ -71,9 +71,7 @@ def main():
         # Generate summary report
         tests_executed = []
         for test, passed in test_results.items():
-            tests_executed.append(
-                {"name": test, "status": "PASSED" if passed else "FAILED"}
-            )
+            tests_executed.append({"name": test, "status": "PASSED" if passed else "FAILED"})
 
         all_passed = all(test_results.values())
 
