@@ -62,7 +62,7 @@
 
 ```bash
 cd debian-packages
-sudo dpkg -i ros-humble-rosbridge-suite_*.deb
+sudo apt install -y ./ros-humble-rosbridge-suite_*.deb
 ```
 
 これで、BSON対応を含むrosbridge_suite全体がインストールされます。
@@ -389,7 +389,7 @@ graph TD
 
 ```bash
 # パッケージのインストール
-sudo dpkg -i ros-humble-rosbridge-suite_*.deb
+sudo apt install -y ./ros-humble-rosbridge-suite_*.deb
 
 # パッケージの削除
 sudo dpkg -r ros-humble-rosbridge-suite

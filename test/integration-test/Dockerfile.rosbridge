@@ -14,7 +14,7 @@ WORKDIR /workspace
 
 # Copy and install the debian package (built in parent directory)
 COPY debian-packages/ros-humble-rosbridge-suite_*.deb /tmp/
-RUN dpkg -i /tmp/ros-humble-rosbridge-suite_*.deb || apt-get install -f -y
+RUN apt install -y /tmp/ros-humble-rosbridge-suite_*.deb
 
 # Expose WebSocket port
 EXPOSE 9090

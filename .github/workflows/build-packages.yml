@@ -149,7 +149,7 @@ jobs:
         echo "sudo apt install -y python3-twisted python3-tornado python3-autobahn python3-pymongo python3-pil" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "# Install the package" >> $GITHUB_STEP_SUMMARY
-        echo "sudo dpkg -i ros-humble-rosbridge-suite_*.deb" >> $GITHUB_STEP_SUMMARY
+        echo "sudo apt install -y ./ros-humble-rosbridge-suite_*.deb" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "# Use the package" >> $GITHUB_STEP_SUMMARY
         echo "source /opt/ros/humble/setup.bash" >> $GITHUB_STEP_SUMMARY
@@ -237,7 +237,7 @@ jobs:
           sudo apt install -y python3-twisted python3-tornado python3-autobahn python3-pymongo python3-pil
 
           # Install the package
-          sudo dpkg -i ros-humble-rosbridge-suite_*.deb
+          sudo apt install -y ./ros-humble-rosbridge-suite_*.deb
 
           # Use the package
           source /opt/ros/humble/setup.bash

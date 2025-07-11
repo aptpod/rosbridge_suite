@@ -47,7 +47,7 @@ sudo apt update
 sudo apt install -y python3-twisted python3-tornado python3-autobahn python3-pymongo python3-pil
 
 # 3. パッケージをインストール
-sudo dpkg -i ros-humble-rosbridge-suite_*.deb
+sudo apt install -y ./ros-humble-rosbridge-suite_*.deb
 ```
 
 **使用方法**
