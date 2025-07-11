@@ -473,9 +473,9 @@ sudo dpkg --configure --pending
 
 BSON対応は`rosbridge_server/src/rosbridge_server/websocket_handler.py`に実装されています：
 
-- **bson_only_mode**: BSON専用モードのサポート
+- **bson_only_mode**: 排他的モード選択（JSON専用 vs BSON専用）
 - **バイナリデータ処理**: 効率的なバイナリメッセージ処理
-- **後方互換性**: 既存のJSON APIとの互換性を維持
+- **公式準拠**: 公式rosbridge_suiteと一致した排他的モード設計
 
 ### パッケージサイズ
 
@@ -568,12 +568,12 @@ integration-test:
 
 | モード | 説明 | 対応クライアント | パフォーマンス |
 |--------|------|------------------|----------------|
-| **標準モード** | JSON/BSON両方対応 | JSON、BSON | 標準 |
+| **JSON専用モード** | JSONのみ受付（デフォルト） | JSONのみ | 標準 |
 | **BSON専用モード** | BSONのみ受付 | BSONのみ | 高性能 |
 
 #### 使い分けの指針
 
-- **標準モード**: 既存JSONクライアントとの互換性が必要な場合
+- **JSON専用モード**: 既存JSONクライアントとの互換性（デフォルト）
 - **BSON専用モード**: 高性能なバイナリ通信が必要な場合（大容量データ、高頻度通信）
 
 #### 性能比較

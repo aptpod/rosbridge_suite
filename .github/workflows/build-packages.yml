@@ -154,10 +154,12 @@ jobs:
         echo "# Use the package" >> $GITHUB_STEP_SUMMARY
         echo "source /opt/ros/humble/setup.bash" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "# Standard mode (JSON + BSON support)" >> $GITHUB_STEP_SUMMARY
+        echo "# JSON-only mode (default)" >> $GITHUB_STEP_SUMMARY
         echo "ros2 launch rosbridge_server rosbridge_websocket_launch.xml" >> $GITHUB_STEP_SUMMARY
+        echo "# or explicitly" >> $GITHUB_STEP_SUMMARY
+        echo "ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=false" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "# Or BSON-only mode for better performance" >> $GITHUB_STEP_SUMMARY
+        echo "# BSON-only mode for better performance" >> $GITHUB_STEP_SUMMARY
         echo "ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=true" >> $GITHUB_STEP_SUMMARY
         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
@@ -240,10 +242,12 @@ jobs:
           # Use the package
           source /opt/ros/humble/setup.bash
 
-          # Standard mode (JSON + BSON support)
+          # JSON-only mode (default)
           ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+          # or explicitly
+          ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=false
 
-          # Or BSON-only mode for better performance
+          # BSON-only mode for better performance
           ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=true
           ```
 
@@ -255,8 +259,8 @@ jobs:
           - Installation documentation (INSTALL.md)
 
           ### BSON Mode
-          This package supports both JSON and BSON serialization:
-          - **Standard mode**: Supports both JSON and BSON clients
+          This package provides exclusive mode selection:
+          - **Standard mode**: JSON-only (default)
           - **BSON-only mode**: Better performance for binary data, BSON clients only
 
           The WebSocket server will be available at `ws://localhost:9090` with BSON support enabled.

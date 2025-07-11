@@ -14,7 +14,7 @@ rosbridge_serverにバイナリJSON（BSON）シリアライゼーション機�
 - **大容量ペイロードの高速データ転送**（画像、点群、センサーデータ等）
 - **標準JSONと比較した帯域使用量削減**
 - **バイナリメッセージタイプでの性能向上**
-- **既存JSONクライアントとの後方互換性維持**
+- **JSON専用モード**（デフォルト）または**BSON専用モード**を選択可能
 
 ## 📋 対応アーキテクチャ
 
@@ -55,12 +55,10 @@ sudo dpkg -i ros-humble-rosbridge-suite_*.deb
 # ROS 2環境をセットアップ
 source /opt/ros/humble/setup.bash
 
-# サーバーを起動（JSONモード）
+# サーバーを起動（デフォルト：JSON専用モード）
 ros2 launch rosbridge_server rosbridge_websocket_launch.xml
-# または明示的に指定
-ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=false
 
-# BSON専用モードで起動
+# BSON専用モードで起動  
 ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=true
 ```
 
