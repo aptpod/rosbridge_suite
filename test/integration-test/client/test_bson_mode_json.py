@@ -47,20 +47,20 @@ class ROSBridgeBSONModeJSONTest:
             "test": "json_to_bson_only_server",
             "status": "expected_error",
             "error": str(error),
-            "message": "JSON message correctly rejected by BSON-only server"
+            "message": "JSON message correctly rejected by BSON-only server",
         })
 
     def on_close(self, ws, close_status_code, close_msg):
         """Handle WebSocket close"""
         print("Connection closed")
         self.connection_closed = True
-        
+
         # If we haven't recorded any tests, it means the connection was rejected
         if not self.results["tests"]:
             self.results["tests"].append({
                 "test": "json_to_bson_only_server",
                 "status": "expected_rejection",
-                "message": "JSON messages correctly rejected by BSON-only server"
+                "message": "JSON messages correctly rejected by BSON-only server",
             })
             self.results["overall_status"] = "PASSED"
         elif not hasattr(self.results, "overall_status"):
@@ -91,29 +91,29 @@ class ROSBridgeBSONModeJSONTest:
                 json_data = json.dumps(json_message)
                 print(f"Sending JSON message: {json_data}")
                 ws.send(json_data)
-                
+
                 # Wait a bit for any response or error
                 time.sleep(5)
-                
+
                 # If we get here without error, the test should fail
                 if not self.test_completed and not self.connection_closed:
                     print("No error occurred - JSON message may have been accepted incorrectly")
                     self.results["tests"].append({
                         "test": "json_to_bson_only_server",
                         "status": "unexpected_success",
-                        "message": "JSON message was accepted by BSON-only server"
+                        "message": "JSON message was accepted by BSON-only server",
                     })
                     self.results["overall_status"] = "FAILED"
                     self.test_completed = True
                     ws.close()
-                    
+
             except Exception as e:
                 print(f"Expected error when sending JSON: {e}")
                 self.results["tests"].append({
-                    "test": "json_to_bson_only_server", 
+                    "test": "json_to_bson_only_server",
                     "status": "expected_error",
                     "error": str(e),
-                    "message": "JSON message correctly rejected"
+                    "message": "JSON message correctly rejected",
                 })
                 self.results["overall_status"] = "PASSED"
                 self.test_completed = True

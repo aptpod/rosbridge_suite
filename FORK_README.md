@@ -58,7 +58,7 @@ source /opt/ros/humble/setup.bash
 # サーバーを起動（デフォルト：JSON専用モード）
 ros2 launch rosbridge_server rosbridge_websocket_launch.xml
 
-# BSON専用モードで起動  
+# BSON専用モードで起動
 ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=true
 ```
 

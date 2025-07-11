@@ -33,7 +33,7 @@ class ROSBridgeJSONModeBSONTest:
         self.results["tests"].append({
             "test": "unexpected_message",
             "status": "unexpected_success",
-            "message": "Received message when failure was expected"
+            "message": "Received message when failure was expected",
         })
 
     def on_error(self, ws, error):
@@ -44,13 +44,13 @@ class ROSBridgeJSONModeBSONTest:
             "test": "bson_to_json_mode",
             "status": "expected_failure",
             "error": str(error),
-            "error_type": str(type(error))
+            "error_type": str(type(error)),
         })
 
     def on_close(self, ws, close_status_code, close_msg):
         """Handle WebSocket close"""
         print("Connection closed")
-        
+
         # Determine if test passed (failure was expected)
         if self.error_occurred or self.timeout_reached or self.connection_failed:
             print("✅ JSON mode BSON test PASSED (failure expected and occurred)")
@@ -85,16 +85,16 @@ class ROSBridgeJSONModeBSONTest:
                     "topic": "/chatter",
                     "type": "std_msgs/msg/String",
                 }
-                
+
                 bson_data = encode(subscribe_message)
                 print(f"Sending BSON data: {len(bson_data)} bytes")
                 ws.send(bson_data, websocket.ABNF.OPCODE_BINARY)
                 print("BSON message sent")
-                
+
                 self.results["tests"].append({
                     "test": "bson_send_to_json_mode",
                     "status": "sent",
-                    "data_size": len(bson_data)
+                    "data_size": len(bson_data),
                 })
 
             except Exception as e:
@@ -103,19 +103,19 @@ class ROSBridgeJSONModeBSONTest:
                 self.results["tests"].append({
                     "test": "bson_send_error",
                     "status": "expected_error",
-                    "error": str(e)
+                    "error": str(e),
                 })
 
             # Wait for potential response or timeout
             time.sleep(10)
-            
+
             if not self.error_occurred and ws.sock and ws.sock.connected:
                 print("Timeout reached - no error occurred (unexpected)")
                 self.timeout_reached = True
                 self.results["tests"].append({
                     "test": "timeout_check",
                     "status": "timeout_without_error",
-                    "message": "No error occurred within timeout period"
+                    "message": "No error occurred within timeout period",
                 })
                 ws.close()
 
@@ -125,7 +125,7 @@ class ROSBridgeJSONModeBSONTest:
     def save_results(self):
         """Save test results to file"""
         import json
-        
+
         os.makedirs(RESULTS_DIR, exist_ok=True)
         timestamp = int(time.time() * 1000)
         filename = f"{RESULTS_DIR}/test-results-json-mode-bson-{timestamp}.json"

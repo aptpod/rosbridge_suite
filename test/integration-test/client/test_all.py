@@ -34,12 +34,12 @@ def run_test(script_name):
 def main():
     # Track test results
     test_results = {}
-    
+
     # Define all tests to run
     tests = [
         "test_json_mode_json.py",   # JSON mode with JSON (should succeed)
-        "test_json_mode_bson.py",   # JSON mode with BSON (should fail)  
-        "test_bson_mode_json.py",   # BSON mode with JSON (should fail)
+        "test_json_mode_bson.py",  # JSON mode with BSON (should fail)
+        "test_bson_mode_json.py",  # BSON mode with JSON (should fail)
         "test_bson_mode_bson.py",   # BSON mode with BSON (should succeed)
     ]
 
@@ -48,36 +48,35 @@ def main():
             try:
                 print(f"\nWaiting 3 seconds before {test_script}...")
                 time.sleep(3)
-                
+
                 test_passed = run_test(test_script)
                 test_results[test_script] = test_passed
-                
+
                 if test_passed:
                     print(f"✅ {test_script} completed successfully")
                 else:
                     print(f"❌ {test_script} failed")
-                    
+
             except Exception as error:
                 print(f"❌ {test_script} failed: {error}")
                 test_results[test_script] = False
 
         print("\n========== All tests completed ==========")
-        
+
         # Display results
         for test, passed in test_results.items():
             status = "PASSED" if passed else "FAILED"
-            print(f'{test}: {status}')
+            print(f"{test}: {status}")
 
         # Generate summary report
         tests_executed = []
         for test, passed in test_results.items():
-            tests_executed.append({
-                "name": test,
-                "status": "PASSED" if passed else "FAILED"
-            })
+            tests_executed.append(
+                {"name": test, "status": "PASSED" if passed else "FAILED"}
+            )
 
         all_passed = all(test_results.values())
-        
+
         summary_report = {
             "test_run": datetime.utcnow().isoformat() + "Z",
             "tests_executed": tests_executed,
@@ -86,8 +85,8 @@ def main():
                 "test_json_mode_json.py": "JSON mode server with JSON messages (expects success)",
                 "test_json_mode_bson.py": "JSON mode server with BSON messages (expects failure)",
                 "test_bson_mode_json.py": "BSON mode server with JSON messages (expects failure)",
-                "test_bson_mode_bson.py": "BSON mode server with BSON messages (expects success)"
-            }
+                "test_bson_mode_bson.py": "BSON mode server with BSON messages (expects success)",
+            },
         }
 
         with open(f"{RESULTS_DIR}/test-summary.json", "w") as f:
