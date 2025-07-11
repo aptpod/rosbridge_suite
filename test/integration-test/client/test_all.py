@@ -32,46 +32,62 @@ def run_test(script_name):
 
 
 def main():
-    json_test_passed = False
-    bson_test_passed = False
+    # Track test results
+    test_results = {}
+    
+    # Define all tests to run
+    tests = [
+        "test_json_mode_json.py",   # JSON mode with JSON (should succeed)
+        "test_json_mode_bson.py",   # JSON mode with BSON (should fail)  
+        "test_bson_mode_json.py",   # BSON mode with JSON (should fail)
+        "test_bson_mode_bson.py",   # BSON mode with BSON (should succeed)
+    ]
 
     try:
-        # Run JSON test
-        try:
-            json_test_passed = run_test("test_json.py")
-            if json_test_passed:
-                print("✅ JSON test completed successfully")
-            else:
-                print("❌ JSON test failed")
-        except Exception as error:
-            print(f"❌ JSON test failed: {error}")
-
-        # Wait a bit between tests
-        print("\nWaiting 5 seconds before next test...")
-        time.sleep(5)
-
-        # Run BSON test
-        try:
-            bson_test_passed = run_test("test_bson.py")
-            if bson_test_passed:
-                print("✅ BSON test completed successfully")
-            else:
-                print("❌ BSON test failed")
-        except Exception as error:
-            print(f"❌ BSON test failed: {error}")
+        for test_script in tests:
+            try:
+                print(f"\nWaiting 3 seconds before {test_script}...")
+                time.sleep(3)
+                
+                test_passed = run_test(test_script)
+                test_results[test_script] = test_passed
+                
+                if test_passed:
+                    print(f"✅ {test_script} completed successfully")
+                else:
+                    print(f"❌ {test_script} failed")
+                    
+            except Exception as error:
+                print(f"❌ {test_script} failed: {error}")
+                test_results[test_script] = False
 
         print("\n========== All tests completed ==========")
-        print(f'JSON Test: {"PASSED" if json_test_passed else "FAILED"}')
-        print(f'BSON Test: {"PASSED" if bson_test_passed else "FAILED"}')
+        
+        # Display results
+        for test, passed in test_results.items():
+            status = "PASSED" if passed else "FAILED"
+            print(f'{test}: {status}')
 
         # Generate summary report
+        tests_executed = []
+        for test, passed in test_results.items():
+            tests_executed.append({
+                "name": test,
+                "status": "PASSED" if passed else "FAILED"
+            })
+
+        all_passed = all(test_results.values())
+        
         summary_report = {
             "test_run": datetime.utcnow().isoformat() + "Z",
-            "tests_executed": [
-                {"name": "test_json.py", "status": "PASSED" if json_test_passed else "FAILED"},
-                {"name": "test_bson.py", "status": "PASSED" if bson_test_passed else "FAILED"},
-            ],
-            "overall_status": "PASSED" if (json_test_passed and bson_test_passed) else "FAILED",
+            "tests_executed": tests_executed,
+            "overall_status": "PASSED" if all_passed else "FAILED",
+            "test_descriptions": {
+                "test_json_mode_json.py": "JSON mode server with JSON messages (expects success)",
+                "test_json_mode_bson.py": "JSON mode server with BSON messages (expects failure)",
+                "test_bson_mode_json.py": "BSON mode server with JSON messages (expects failure)",
+                "test_bson_mode_bson.py": "BSON mode server with BSON messages (expects success)"
+            }
         }
 
         with open(f"{RESULTS_DIR}/test-summary.json", "w") as f:
@@ -90,7 +106,7 @@ def main():
             print(f"Error listing result files: {e}")
 
         # Exit with appropriate code
-        if json_test_passed and bson_test_passed:
+        if all_passed:
             print("\n🎉 All integration tests PASSED")
             sys.exit(0)
         else:

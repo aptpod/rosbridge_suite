@@ -12,14 +12,14 @@ import websocket
 ROSBRIDGE_URL = os.environ.get("ROSBRIDGE_URL", "ws://localhost:9090")
 RESULTS_DIR = os.environ.get("RESULTS_DIR", "/results")
 
-print("Starting JSON mode test...")
+print("Starting JSON mode server JSON test...")
 print(f"Connecting to: {ROSBRIDGE_URL}")
 
 
 class ROSBridgeJSONTest:
     def __init__(self):
         self.results = {
-            "mode": "JSON",
+            "mode": "JSON_Mode_JSON",
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "tests": [],
         }
@@ -179,7 +179,7 @@ class ROSBridgeJSONTest:
 
     def on_open(self, ws):
         """Handle WebSocket connection open"""
-        print("Connected to rosbridge server (JSON mode)")
+        print("Connected to JSON mode server, sending JSON messages...")
 
         def send_subscriptions():
             # Test 1: Subscribe to chatter topic

@@ -12,14 +12,14 @@ from bson import decode, encode
 ROSBRIDGE_URL = os.environ.get("ROSBRIDGE_URL_BSON", "ws://localhost:9091")
 RESULTS_DIR = os.environ.get("RESULTS_DIR", "/results")
 
-print("Starting BSON mode test...")
+print("Starting BSON mode server BSON test...")
 print(f"Connecting to: {ROSBRIDGE_URL}")
 
 
-class ROSBridgeBSONTest:
+class ROSBridgeBSONModeBSONTest:
     def __init__(self):
         self.results = {
-            "mode": "BSON",
+            "mode": "BSON_Mode_BSON",
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "tests": [],
         }
@@ -205,7 +205,7 @@ class ROSBridgeBSONTest:
 
     def on_open(self, ws):
         """Handle WebSocket connection open"""
-        print("Connected to rosbridge server (BSON mode)")
+        print("Connected to BSON mode server (BSON mode)")
         print(f"Connected to: {ROSBRIDGE_URL}")
         print("Starting BSON message sending...")
 
@@ -303,5 +303,5 @@ class ROSBridgeBSONTest:
 
 
 if __name__ == "__main__":
-    test = ROSBridgeBSONTest()
+    test = ROSBridgeBSONModeBSONTest()
     test.run_test()
