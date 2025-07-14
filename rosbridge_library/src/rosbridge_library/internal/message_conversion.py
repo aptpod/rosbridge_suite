@@ -116,18 +116,29 @@ def configure(node_handle=None):
             "bson_only_mode", Parameter("", value=False)
         ).value
 
-    if binary_encoder is None:
-        if binary_encoder_type == "bson" or bson_only_mode:
-            binary_encoder = bson.Binary
-        elif binary_encoder_type == "default" or binary_encoder_type == "b64":
-            binary_encoder = standard_b64encode
-        else:
-            print("Unknown encoder type '%s'" % binary_encoder_type)
-            exit(0)
+    # Always reconfigure binary_encoder based on current settings
+    if binary_encoder_type == "bson" or bson_only_mode:
+        binary_encoder = bson.Binary
+    elif binary_encoder_type == "default" or binary_encoder_type == "b64":
+        binary_encoder = standard_b64encode
+    else:
+        print("Unknown encoder type '%s'" % binary_encoder_type)
+        exit(0)
+    
 
 
 def get_encoder():
-    configure()
+    # Legacy function - now uses binary_encoder_type only
+    global binary_encoder, binary_encoder_type
+    
+    # Configure binary_encoder based on type setting
+    if binary_encoder_type == "bson":
+        binary_encoder = bson.Binary
+    elif binary_encoder_type == "default" or binary_encoder_type == "b64":
+        binary_encoder = standard_b64encode
+    else:
+        binary_encoder = standard_b64encode  # fallback
+    
     return binary_encoder
 
 
@@ -163,11 +174,22 @@ class FieldTypeMismatchException(Exception):
             )
 
 
-def extract_values(inst):
+def extract_values(inst, bson_only_mode=False):
     rostype = msg_instance_type_repr(inst)
+    
     if rostype is None:
         raise InvalidMessageException(inst=inst)
-    return _from_inst(inst, rostype)
+    return _from_inst(inst, rostype, bson_only_mode)
+
+
+def extract_json_values(inst):
+    """Extract message values for JSON encoding (with Base64 for binary data)."""
+    return extract_values(inst, bson_only_mode=False)
+
+
+def extract_bson_values(inst):
+    """Extract message values for BSON encoding (with Binary objects for efficiency)."""
+    return extract_values(inst, bson_only_mode=True)
 
 
 def populate_instance(msg, inst, clock=ROSClock()):
@@ -199,20 +221,27 @@ def msg_class_type_repr(msg_class):
     return f"{class_repr[0]}/{class_repr[1]}/{class_repr[3]}"
 
 
-def _from_inst(inst, rostype):
-    global bson_only_mode
+def _from_inst(inst, rostype, bson_only_mode=False):
     # Special case for uint8[], we encode the string
     for binary_type, expression in ros_binary_types_list_braces:
-        if expression.sub(binary_type, rostype) in ros_binary_types:
-            encoded = get_encoder()(inst)
-            return encoded.decode("ascii")
+        match_result = expression.sub(binary_type, rostype)
+        
+        if match_result in ros_binary_types:
+            # Use passed parameter instead of global variable for better control
+            if bson_only_mode:
+                from rosbridge_library.util import bson
+                binary_data = bson.Binary(inst)
+                return binary_data
+            else:
+                # For JSON mode, use base64 encoding
+                encoded = get_encoder()(inst)
+                return encoded.decode("ascii")
 
     # Check for time or duration
     if rostype in ros_time_types:
         return {"sec": inst.sec, "nanosec": inst.nanosec}
 
-    if bson_only_mode is None:
-        bson_only_mode = rospy.get_param("~bson_only_mode", False)
+    # bson_only_mode is now passed as parameter - no need for global fallback
     # Check for primitive types
     if rostype in ros_primitive_types:
         # JSON does not support Inf and NaN. They are mapped to None and encoded as null
@@ -228,13 +257,13 @@ def _from_inst(inst, rostype):
 
     # Check if it's a list or tuple
     if type(inst) in list_types:
-        return _from_list_inst(inst, rostype)
+        return _from_list_inst(inst, rostype, bson_only_mode)
 
     # Assume it's otherwise a full ros msg object
-    return _from_object_inst(inst, rostype)
+    return _from_object_inst(inst, rostype, bson_only_mode)
 
 
-def _from_list_inst(inst, rostype):
+def _from_list_inst(inst, rostype, bson_only_mode=False):
     # Can duck out early if the list is empty
     if len(inst) == 0:
         return []
@@ -257,16 +286,16 @@ def _from_list_inst(inst, rostype):
             return list(inst)
 
     # Call to _to_inst for every element of the list
-    return [_from_inst(x, rostype) for x in inst]
+    return [_from_inst(x, rostype, bson_only_mode) for x in inst]
 
 
-def _from_object_inst(inst, rostype):
+def _from_object_inst(inst, rostype, bson_only_mode=False):
     # Create an empty dict then populate with values from the inst
     msg = {}
     # Equivalent for zip(inst.__slots__, inst._slot_types) in ROS1:
     for field_name, field_rostype in inst.get_fields_and_field_types().items():
         field_inst = getattr(inst, field_name)
-        msg[field_name] = _from_inst(field_inst, field_rostype)
+        msg[field_name] = _from_inst(field_inst, field_rostype, bson_only_mode)
     return msg
 
 
@@ -296,6 +325,14 @@ def _to_inst(msg, rostype, roottype, clock=ROSClock(), inst=None, stack=[]):
 
 
 def _to_binary_inst(msg):
+    global bson_only_mode
+    
+    # Handle BSON Binary objects (only in BSON mode)
+    if bson_only_mode and hasattr(msg, '__class__') and 'Binary' in str(type(msg)):
+        # Extract bytes from BSON Binary object
+        data = array.array("B")
+        data.frombytes(bytes(msg))
+        return data
     if isinstance(msg, str):
         return list(standard_b64decode(msg))
     if isinstance(msg, list):
