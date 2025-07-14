@@ -3,7 +3,7 @@ FROM python:3.11-slim
 WORKDIR /workspace
 
 # Install Python dependencies
-RUN pip install websocket-client pymongo
+RUN pip install websocket-client pymongo websockets
 
 # Copy test files
 COPY client/ .

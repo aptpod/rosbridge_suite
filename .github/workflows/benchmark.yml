@@ -1,0 +1,199 @@
+name: PointCloud2 Benchmark
+
+on:
+  push:
+    branches: [ feature/#1-add-bson-support-humble ]
+  pull_request:
+    branches: [ ros2 ]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build debian package
+      working-directory: .
+      run: |
+        ./build-deb.sh current
+        
+    - name: Run PointCloud2 Benchmark Tests
+      working-directory: test/integration-test
+      run: |
+        # Clean up any existing containers
+        docker compose down --volumes --remove-orphans || true
+        docker system prune -f || true
+        
+        # Create results directory
+        mkdir -p results
+        
+        echo "=== Starting JSON Mode Benchmark ==="
+        # Start services for JSON mode
+        docker compose up -d ros-master ros_nodes rosbridge
+        
+        # Wait for services to be ready
+        sleep 15
+        
+        # Start benchmark publisher
+        docker compose exec -d ros_nodes bash -c "source /opt/ros/humble/setup.bash && python3 /app/scripts/pointcloud2_benchmark_publisher.py"
+        
+        # Run JSON benchmark
+        timeout 120 docker run --rm --network integration-test_ros-network \
+          -v "$(pwd)/client:/app/client:ro" \
+          -v "$(pwd)/results:/app/results" \
+          integration-test-client python3 /app/client/json_only_overhead_test.py || echo "JSON test completed"
+        
+        # Stop JSON mode services
+        docker compose down
+        sleep 5
+        
+        echo "=== Starting BSON Mode Benchmark ==="
+        # Start services for BSON mode
+        docker compose --profile bson up -d ros-master ros_nodes rosbridge-bson
+        
+        # Wait for services to be ready
+        sleep 15
+        
+        # Start benchmark publisher
+        docker compose exec -d ros_nodes bash -c "source /opt/ros/humble/setup.bash && python3 /app/scripts/pointcloud2_benchmark_publisher.py"
+        
+        # Run BSON benchmark
+        timeout 120 docker run --rm --network integration-test_ros-network \
+          -v "$(pwd)/client:/app/client:ro" \
+          -v "$(pwd)/results:/app/results" \
+          integration-test-client python3 /app/client/bson_overhead_test.py || echo "BSON test completed"
+        
+        # Run internal profiler
+        echo "=== Running Internal Processing Profiler ==="
+        timeout 60 docker run --rm --network integration-test_ros-network \
+          -v "$(pwd):/app" \
+          --entrypoint="" integration-test-rosbridge \
+          bash -c "source /opt/ros/humble/setup.bash && python3 /app/rosbridge_internal_profiler.py" > results/internal-profiler-output.txt || echo "Internal profiler completed"
+        
+        # Stop all services
+        docker compose down
+        
+    - name: Generate Benchmark Summary
+      working-directory: test/integration-test
+      run: |
+        # Run benchmark analyzer
+        python3 client/ci_benchmark_analyzer.py results
+        
+        # Create detailed benchmark summary
+        cat > results/benchmark-summary.md << 'EOF'
+        # PointCloud2 Benchmark Results
+        
+        Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        Commit: ${{ github.sha }}
+        Branch: ${{ github.ref_name }}
+        
+        ## Test Configuration
+        - Data size: 600KB PointCloud2 (50,000 points)
+        - Iterations: 5 measurements each mode
+        - Environment: GitHub Actions Ubuntu Latest
+        - Docker containers: ROS2 Humble + rosbridge suite
+        
+        ## Benchmark Overview
+        This benchmark compares JSON vs BSON encoding performance for PointCloud2 messages:
+        
+        1. **JSON Mode**: Uses Base64 encoding for binary data
+        2. **BSON Mode**: Uses BSON Binary objects for efficient binary data
+        3. **Internal Profiler**: Measures DDS(C++) → Python → BSON conversion overhead
+        
+        EOF
+        
+        # Add analysis results if available
+        if [ -f results/ci-benchmark-analysis.json ]; then
+          echo "## Performance Analysis" >> results/benchmark-summary.md
+          echo "" >> results/benchmark-summary.md
+          
+          # Extract key findings from analysis
+          python3 << 'PYTHON'
+        import json
+        
+        with open("results/ci-benchmark-analysis.json", "r") as f:
+            analysis = json.load(f)
+        
+        # Add benchmark comparison
+        if "benchmark_analysis" in analysis and "performance_comparison" in analysis["benchmark_analysis"]:
+            comp = analysis["benchmark_analysis"]["performance_comparison"]
+            print(f"### End-to-End Performance")
+            print(f"- **Latency Improvement**: {comp['latency_improvement_percent']}%")
+            print(f"- **Message Size Reduction**: {comp['size_reduction_percent']}%")
+            print(f"- **BSON Performance**: {'✅ Better' if comp['bson_is_better'] else '⚠️ Needs Investigation'}")
+            print("")
+        
+        # Add profiler results
+        if "profiler_analysis" in analysis:
+            prof = analysis["profiler_analysis"]
+            print(f"### Internal Processing")
+            if "json_conversion_ms" in prof and "bson_conversion_ms" in prof:
+                json_time = prof["json_conversion_ms"]
+                bson_time = prof["bson_conversion_ms"]
+                improvement = ((json_time - bson_time) / json_time) * 100
+                print(f"- **JSON Conversion**: {json_time:.3f}ms")
+                print(f"- **BSON Conversion**: {bson_time:.3f}ms")
+                print(f"- **Processing Speedup**: {improvement:.1f}%")
+            if "bson_efficiency_gain_percent" in prof:
+                print(f"- **Data Efficiency Gain**: {prof['bson_efficiency_gain_percent']}%")
+            print("")
+        
+        # Add overall findings
+        if "overall_assessment" in analysis:
+            assessment = analysis["overall_assessment"]
+            print(f"### Key Findings")
+            for finding in assessment["findings"]:
+                print(f"- {finding}")
+            print("")
+        PYTHON
+        fi
+        
+        # List all result files
+        echo "## Generated Files" >> results/benchmark-summary.md
+        find results -name "*.json" -o -name "*.txt" | sort | while read file; do
+          size=$(ls -lh "$file" | awk '{print $5}')
+          echo "- \`$(basename "$file")\` ($size)" >> results/benchmark-summary.md
+        done
+        
+        # Add internal profiler output if available
+        if [ -f results/internal-profiler-output.txt ]; then
+          echo "" >> results/benchmark-summary.md
+          echo "## Internal Processing Details" >> results/benchmark-summary.md
+          echo '```' >> results/benchmark-summary.md
+          tail -30 results/internal-profiler-output.txt >> results/benchmark-summary.md
+          echo '```' >> results/benchmark-summary.md
+        fi
+        
+        # Show summary
+        echo "=== Generated Benchmark Summary ==="
+        cat results/benchmark-summary.md
+        
+        # Show analysis if available
+        if [ -f results/ci-benchmark-analysis.json ]; then
+          echo "=== Benchmark Analysis ==="
+          cat results/ci-benchmark-analysis.json
+        fi
+        
+    - name: Upload Benchmark Results
+      uses: actions/upload-artifact@v4
+      if: always()  # Upload even if tests fail
+      with:
+        name: pointcloud2-benchmark-results-${{ github.run_number }}
+        path: test/integration-test/results/
+        retention-days: 30
+        
+    - name: Upload Docker Logs
+      uses: actions/upload-artifact@v4
+      if: failure()  # Only on failure
+      with:
+        name: docker-logs-${{ github.run_number }}
+        path: |
+          test/integration-test/docker-compose.yml
+        retention-days: 7

@@ -229,9 +229,8 @@ def _from_inst(inst, rostype, bson_only_mode=False):
         if match_result in ros_binary_types:
             # Use passed parameter instead of global variable for better control
             if bson_only_mode:
-                from rosbridge_library.util import bson
-                binary_data = bson.Binary(inst)
-                return binary_data
+                # Zero-copy optimized BSON Binary creation
+                return _create_zero_copy_binary(inst)
             else:
                 # For JSON mode, use base64 encoding
                 encoded = get_encoder()(inst)
@@ -290,6 +289,35 @@ def _from_list_inst(inst, rostype, bson_only_mode=False):
 
 
 def _from_object_inst(inst, rostype, bson_only_mode=False):
+    # Zero-copy optimization for BSON mode
+    if bson_only_mode:
+        return _from_object_inst_zero_copy(inst, rostype)
+    
+    # Standard implementation for JSON mode
+    return _from_object_inst_standard(inst, rostype, bson_only_mode)
+
+
+def _from_object_inst_zero_copy(inst, rostype):
+    """Zero-copy optimized message conversion for BSON mode."""
+    # Pre-allocate result dictionary
+    fields_and_types = inst.get_fields_and_field_types()
+    msg = {}
+    
+    # Batch field access to minimize getattr() calls
+    for field_name, field_rostype in fields_and_types.items():
+        field_inst = getattr(inst, field_name)
+        
+        # Zero-copy optimization for binary data
+        if _is_binary_field(field_rostype):
+            msg[field_name] = _create_zero_copy_binary(field_inst)
+        else:
+            msg[field_name] = _from_inst(field_inst, field_rostype, bson_only_mode=True)
+    
+    return msg
+
+
+def _from_object_inst_standard(inst, rostype, bson_only_mode=False):
+    """Standard message conversion implementation."""
     # Create an empty dict then populate with values from the inst
     msg = {}
     # Equivalent for zip(inst.__slots__, inst._slot_types) in ROS1:
@@ -297,6 +325,64 @@ def _from_object_inst(inst, rostype, bson_only_mode=False):
         field_inst = getattr(inst, field_name)
         msg[field_name] = _from_inst(field_inst, field_rostype, bson_only_mode)
     return msg
+
+
+def _is_binary_field(field_rostype):
+    """Check if field type represents binary data suitable for zero-copy optimization."""
+    # Check against ros_binary_types patterns
+    for binary_type, expression in ros_binary_types_list_braces:
+        match_result = expression.sub(binary_type, field_rostype)
+        if match_result in ros_binary_types:
+            return True
+    return False
+
+
+def _create_zero_copy_binary(field_inst):
+    """Create BSON Binary with zero-copy optimization."""
+    from rosbridge_library.util import bson
+    
+    # ROS2 array.array optimization (most common case for PointCloud2)
+    if hasattr(field_inst, 'tobytes'):
+        # array.array has efficient tobytes() method - zero-copy
+        try:
+            return bson.Binary(field_inst.tobytes())
+        except (TypeError, AttributeError):
+            pass
+    
+    # Direct memory view optimization for NumPy arrays
+    if hasattr(field_inst, '__array_interface__'):
+        # NumPy array or similar - use memoryview for zero-copy
+        try:
+            memory_view = memoryview(field_inst)
+            return bson.Binary(memory_view)
+        except (TypeError, BufferError):
+            pass
+    
+    # Python buffer protocol support
+    try:
+        # Try to create memoryview directly
+        memory_view = memoryview(field_inst)
+        return bson.Binary(memory_view)
+    except (TypeError, ValueError):
+        pass
+    
+    # Bytes-like objects optimization
+    if isinstance(field_inst, (bytes, bytearray)):
+        # Direct bytes - already optimal
+        return bson.Binary(field_inst)
+    
+    # List/tuple of integers (fallback for uint8 arrays)
+    if isinstance(field_inst, (list, tuple)) and field_inst:
+        if all(isinstance(x, int) and 0 <= x <= 255 for x in field_inst[:10]):  # Sample check
+            # Convert to bytes efficiently
+            try:
+                byte_data = bytes(field_inst)
+                return bson.Binary(byte_data)
+            except (ValueError, TypeError):
+                pass
+    
+    # Fallback to standard BSON Binary creation
+    return bson.Binary(field_inst)
 
 
 def _to_inst(msg, rostype, roottype, clock=ROSClock(), inst=None, stack=[]):

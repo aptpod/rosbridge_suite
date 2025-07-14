@@ -31,6 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import fnmatch
+import time
 from functools import partial
 from threading import Lock
 
@@ -328,11 +329,31 @@ class Subscribe(Capability):
             # Check protocol bson_only_mode setting
             protocol_bson_mode = getattr(self.protocol, 'bson_only_mode', False)
             
-            # Use BSON-optimized path if protocol setting is True
-            if protocol_bson_mode:
-                outgoing_msg["msg"] = message.get_bson_values()
+            # Benchmark timing measurement for /pointcloud_benchmark topic
+            if topic == "/pointcloud_benchmark":
+                start_time = time.time()
+                
+                # Use BSON-optimized path if protocol setting is True
+                if protocol_bson_mode:
+                    outgoing_msg["msg"] = message.get_bson_values()
+                    encoding_method = "bson"
+                else:
+                    outgoing_msg["msg"] = message.get_json_values()
+                    encoding_method = "json"
+                    
+                processing_time = time.time() - start_time
+                
+                # Log benchmark timing
+                self.protocol.log("info", 
+                    f"BENCHMARK: topic={topic}, "
+                    f"encoding={encoding_method}, "
+                    f"processing_time={processing_time*1000:.3f}ms")
             else:
-                outgoing_msg["msg"] = message.get_json_values()
+                # Standard processing for non-benchmark topics
+                if protocol_bson_mode:
+                    outgoing_msg["msg"] = message.get_bson_values()
+                else:
+                    outgoing_msg["msg"] = message.get_json_values()
 
         self.protocol.send(outgoing_msg, compression=compression)
 

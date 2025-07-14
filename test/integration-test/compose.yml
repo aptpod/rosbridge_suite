@@ -64,26 +64,46 @@ services:
       - ros-network
 
 
-  # Rosbridge server with BSON support (Hybrid mode)
-  rosbridge-server:
+  # ROS nodes container (includes all publishers and services)
+  ros_nodes:
+    image: ros:humble
+    environment:
+      - ROS_DOMAIN_ID=42
+    volumes:
+      - ./scripts:/app/scripts:ro
+    command: >
+      /bin/bash -c "
+        source /opt/ros/humble/setup.bash &&
+        apt-get update &&
+        apt-get install -y python3-numpy ros-humble-sensor-msgs ros-humble-demo-nodes-cpp ros-humble-example-interfaces ros-humble-std-srvs &&
+        python3 /app/scripts/echo_services.py &
+        ros2 run demo_nodes_cpp talker &
+        python3 /app/scripts/pointcloud2_publisher.py &
+        sleep infinity
+      "
+    depends_on:
+      - ros-master
+    networks:
+      - ros-network
+
+  # Rosbridge server in JSON mode (default)
+  rosbridge:
     build:
       context: ../..
       dockerfile: test/integration-test/Dockerfile.rosbridge
     environment:
       - ROS_DOMAIN_ID=42
-      - BSON_ONLY_MODE=false  # Hybrid mode - supports both JSON and BSON
+      - BSON_ONLY_MODE=false  # JSON mode
     ports:
       - "9090:9090"
     depends_on:
       - ros-master
-      - chatter-talker
-      - pointcloud2-publisher
-      - echo-services
+      - ros_nodes
     networks:
       - ros-network
 
-  # Rosbridge server in BSON-only mode for testing
-  rosbridge-server-bson:
+  # Rosbridge server in BSON-only mode
+  rosbridge-bson:
     build:
       context: ../..
       dockerfile: test/integration-test/Dockerfile.rosbridge
@@ -94,34 +114,35 @@ services:
       - "9091:9090"
     depends_on:
       - ros-master
-      - chatter-talker
-      - pointcloud2-publisher
-      - echo-services
+      - ros_nodes
     networks:
       - ros-network
+    profiles:
+      - bson
 
-  # Test client for JSON/BSON testing
-  test-client:
+  # Test client for JSON/BSON testing and benchmarks
+  client:
     build:
       context: .
       dockerfile: Dockerfile.client
     environment:
-      - ROSBRIDGE_URL=ws://rosbridge-server:9090
-      - ROSBRIDGE_URL_BSON=ws://rosbridge-server-bson:9090
-      - RESULTS_DIR=/results
+      - ROSBRIDGE_URL=ws://rosbridge:9090
+      - ROSBRIDGE_URL_BSON=ws://rosbridge-bson:9090
+      - RESULTS_DIR=/app/results
     volumes:
-      - ./client:/workspace:ro
-      - ./results:/results
+      - ./client:/app/client:ro
+      - ./results:/app/results
     command: >
       /bin/bash -c "
         sleep 10 &&
-        python3 test_all.py
+        python3 /app/client/test_all.py
       "
     depends_on:
-      - rosbridge-server
-      - rosbridge-server-bson
+      - rosbridge
     networks:
       - ros-network
+    profiles:
+      - test
 
 networks:
   ros-network:
