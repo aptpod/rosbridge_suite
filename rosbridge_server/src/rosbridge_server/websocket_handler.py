@@ -39,6 +39,7 @@ from functools import partial, wraps
 
 from rosbridge_library.rosbridge_protocol import RosbridgeProtocol
 from rosbridge_library.util import bson
+from rosbridge_library.internal import message_conversion
 from tornado.ioloop import IOLoop
 from tornado.iostream import StreamClosedError
 from tornado.websocket import WebSocketClosedError, WebSocketHandler
@@ -135,11 +136,15 @@ class RosbridgeWebSocket(WebSocketHandler):
             "unregister_timeout": cls.unregister_timeout,
             "bson_only_mode": cls.bson_only_mode,
         }
+        
         try:
             self.client_id = uuid.uuid4()
             self.protocol = RosbridgeProtocol(
                 self.client_id, cls.node_handle, parameters=parameters
             )
+            # Configure message_conversion with bson_only_mode
+            message_conversion.bson_only_mode = cls.bson_only_mode
+            message_conversion.configure()
             self.incoming_queue = IncomingQueue(self.protocol)
             self.incoming_queue.start()
             self.protocol.outgoing = self.send_message

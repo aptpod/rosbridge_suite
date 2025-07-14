@@ -35,8 +35,68 @@ class ROSBridgeJSONTest:
         """Validate chatter message contains 'Hello World' pattern"""
         return data and isinstance(data, str) and "Hello World" in data
 
+    def is_base64_encoded(self, data):
+        """Check if data appears to be base64 encoded"""
+        import base64
+        import re
+        
+        if isinstance(data, str):
+            # Check if it looks like base64 (alphanumeric + / + = padding)
+            if re.match(r'^[A-Za-z0-9+/]*={0,2}$', data) and len(data) % 4 == 0:
+                try:
+                    base64.b64decode(data)
+                    return True
+                except Exception:
+                    return False
+        return False
+
+    def analyze_pointcloud_data(self, msg):
+        """Analyze PointCloud2 data field format and content"""
+        data_field = msg.get("data")
+        if not data_field:
+            return {"analysis": "no_data", "size": 0, "format": "unknown"}
+        
+        analysis = {
+            "size": len(data_field) if isinstance(data_field, (str, list)) else 0,
+            "type": type(data_field).__name__,
+            "format": "unknown"
+        }
+        
+        if isinstance(data_field, str):
+            analysis["format"] = "base64" if self.is_base64_encoded(data_field) else "string"
+            # Log first 50 chars for inspection
+            analysis["preview"] = data_field[:50] + ("..." if len(data_field) > 50 else "")
+        elif isinstance(data_field, list):
+            analysis["format"] = "array"
+            analysis["length"] = len(data_field)
+            # Log first few elements
+            analysis["preview"] = str(data_field[:10]) + ("..." if len(data_field) > 10 else "")
+        elif hasattr(data_field, '__class__') and 'Binary' in str(type(data_field)):
+            analysis["format"] = "bson_binary"
+            analysis["size"] = len(data_field) if hasattr(data_field, '__len__') else 0
+            analysis["preview"] = f"BSON Binary object: {str(type(data_field))}"
+        
+        return analysis
+
     def validate_pointcloud_message(self, msg):
-        """Validate PointCloud2 has valid structure"""
+        """Validate PointCloud2 has valid structure and analyze data format"""
+        data_analysis = self.analyze_pointcloud_data(msg)
+        
+        # Log detailed analysis
+        print(f"  📊 PointCloud2 data analysis (JSON mode):")
+        print(f"     Type: {data_analysis['type']}")
+        print(f"     Format: {data_analysis['format']}")
+        print(f"     Size: {data_analysis['size']}")
+        if 'preview' in data_analysis:
+            print(f"     Preview: {data_analysis['preview']}")
+        if 'length' in data_analysis:
+            print(f"     Array length: {data_analysis['length']}")
+        
+        # Store analysis in test results for later inspection
+        if not hasattr(self, 'pointcloud_analyses'):
+            self.pointcloud_analyses = []
+        self.pointcloud_analyses.append(data_analysis)
+        
         return (
             msg.get("width", 0) > 0
             and msg.get("height", 0) >= 1
@@ -236,6 +296,14 @@ class ROSBridgeJSONTest:
 
     def save_results(self):
         """Save test results to file"""
+        # Add PointCloud2 analysis summary to results
+        if hasattr(self, 'pointcloud_analyses') and self.pointcloud_analyses:
+            self.results["pointcloud_data_analysis"] = {
+                "total_analyzed": len(self.pointcloud_analyses),
+                "analyses": self.pointcloud_analyses,
+                "summary": self.generate_analysis_summary()
+            }
+
         os.makedirs(RESULTS_DIR, exist_ok=True)
         timestamp = int(time.time() * 1000)
         filename = f"{RESULTS_DIR}/test-results-json-{timestamp}.json"
@@ -244,6 +312,35 @@ class ROSBridgeJSONTest:
             json.dump(self.results, f, indent=2)
 
         print(f"Results saved to: {filename}")
+
+    def generate_analysis_summary(self):
+        """Generate summary of PointCloud2 data analyses"""
+        if not hasattr(self, 'pointcloud_analyses') or not self.pointcloud_analyses:
+            return {"error": "No analyses available"}
+
+        formats = {}
+        total_size = 0
+        
+        for analysis in self.pointcloud_analyses:
+            format_type = analysis.get("format", "unknown")
+            formats[format_type] = formats.get(format_type, 0) + 1
+            total_size += analysis.get("size", 0)
+        
+        avg_size = total_size / len(self.pointcloud_analyses) if self.pointcloud_analyses else 0
+        
+        # Check if any data is base64 encoded
+        has_base64 = any(a.get("format") == "base64" for a in self.pointcloud_analyses)
+        has_bson_binary = any(a.get("format") == "bson_binary" for a in self.pointcloud_analyses)
+        
+        return {
+            "format_distribution": formats,
+            "average_data_size": avg_size,
+            "total_messages_analyzed": len(self.pointcloud_analyses),
+            "contains_base64": has_base64,
+            "contains_bson_binary": has_bson_binary,
+            "mode": "JSON-only",
+            "encoding_efficiency": "EXPECTED" if has_base64 else "UNEXPECTED" if has_bson_binary else "UNKNOWN"
+        }
 
     def run_test(self):
         """Run the integration test"""
