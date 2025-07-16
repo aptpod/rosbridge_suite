@@ -309,6 +309,19 @@ class Subscribe(Capability):
 
         """
         # TODO: fragmentation, proper ids
+        
+        # Log start of publish processing (changed to info for visibility)
+        start_time = time.time()
+        self.protocol.log("info", f"[ROSBRIDGE LATENCY] Starting publish processing for topic '{topic}' at {start_time:.6f}")
+        
+        # Monitor concurrent message processing
+        if hasattr(self, '_processing_count'):
+            self._processing_count += 1
+        else:
+            self._processing_count = 1
+        
+        if self._processing_count > 1:
+            self.protocol.log("warn", f"[CONCURRENT PROCESSING] Topic '{topic}': {self._processing_count} messages being processed simultaneously")
 
         outgoing_msg = {"op": "publish", "topic": topic}
         if compression == "png":
@@ -329,33 +342,84 @@ class Subscribe(Capability):
             # Check protocol bson_only_mode setting
             protocol_bson_mode = getattr(self.protocol, 'bson_only_mode', False)
             
-            # Benchmark timing measurement for /pointcloud_benchmark topic
-            if topic == "/pointcloud_benchmark":
-                start_time = time.time()
+            # Debug: Log detailed bson_only_mode information
+            self.protocol.log("info", f"[BSON_DEBUG] protocol.bson_only_mode: {getattr(self.protocol, 'bson_only_mode', 'NOT_SET')}")
+            self.protocol.log("info", f"[BSON_DEBUG] protocol_bson_mode: {protocol_bson_mode}")
+            self.protocol.log("info", f"[BSON_DEBUG] protocol.parameters: {getattr(self.protocol, 'parameters', 'NOT_SET')}")
+            
+            # Log BSON mode status
+            self.protocol.log("info", f"[ROSBRIDGE LATENCY] Processing topic '{topic}' in {'BSON' if protocol_bson_mode else 'JSON'} mode")
+            
+            # Log before message extraction
+            extract_start = time.time()
+            
+            # Detailed timing for message extraction bottleneck investigation
+            if protocol_bson_mode:
+                # Debug: Check message object type and methods
+                self.protocol.log("info", f"[BSON_DEBUG] message object type: {type(message)}")
+                self.protocol.log("info", f"[BSON_DEBUG] message object methods: {[m for m in dir(message) if not m.startswith('_')]}")
                 
-                # Use BSON-optimized path if protocol setting is True
-                if protocol_bson_mode:
-                    outgoing_msg["msg"] = message.get_bson_values()
-                    encoding_method = "bson"
-                else:
-                    outgoing_msg["msg"] = message.get_json_values()
-                    encoding_method = "json"
-                    
-                processing_time = time.time() - start_time
+                # Check if get_bson_values method exists
+                has_bson_method = hasattr(message, 'get_bson_values')
+                self.protocol.log("info", f"[BSON_DEBUG] message.get_bson_values exists: {has_bson_method}")
                 
-                # Log benchmark timing
-                self.protocol.log("info", 
-                    f"BENCHMARK: topic={topic}, "
-                    f"encoding={encoding_method}, "
-                    f"processing_time={processing_time*1000:.3f}ms")
+                self.protocol.log("info", f"[ROSBRIDGE LATENCY] About to call message.get_bson_values() for topic '{topic}'")
+                method_start = time.time()
+                outgoing_msg["msg"] = message.get_bson_values()
+                method_time = time.time() - method_start
+                self.protocol.log("info", f"[ROSBRIDGE LATENCY] message.get_bson_values() completed in {method_time*1000:.3f}ms")
+                encoding_method = "bson"
             else:
-                # Standard processing for non-benchmark topics
-                if protocol_bson_mode:
-                    outgoing_msg["msg"] = message.get_bson_values()
-                else:
-                    outgoing_msg["msg"] = message.get_json_values()
+                self.protocol.log("info", f"[ROSBRIDGE LATENCY] About to call message.get_json_values() for topic '{topic}'")
+                method_start = time.time()
+                outgoing_msg["msg"] = message.get_json_values()
+                method_time = time.time() - method_start
+                self.protocol.log("info", f"[ROSBRIDGE LATENCY] message.get_json_values() completed in {method_time*1000:.3f}ms")
+                encoding_method = "json"
+            
+            # Log message extraction time (changed to info level for visibility)
+            extract_time = time.time() - extract_start
+            self.protocol.log("info", f"[ROSBRIDGE LATENCY] Message extraction for topic '{topic}' took {extract_time*1000:.3f}ms")
 
+        # Log before sending with detailed WebSocket debug info
+        send_start = time.time()
+        
+        # Calculate message size for WebSocket debug
+        import json
+        import sys
+        if encoding_method == "bson":
+            # For BSON, estimate size from the message content
+            msg_size = sys.getsizeof(outgoing_msg)
+        else:
+            # For JSON, get actual serialized size
+            msg_size = len(json.dumps(outgoing_msg))
+        
+        self.protocol.log("info", f"[ROSBRIDGE LATENCY] Sending message to WebSocket for topic '{topic}' at {time.time()} (size: {msg_size} bytes)")
+        
         self.protocol.send(outgoing_msg, compression=compression)
+        
+        send_time = time.time() - send_start
+        self.protocol.log("info", f"[WEBSOCKET_DEBUG] WebSocket send() completed in {send_time*1000:.3f}ms for {msg_size} bytes")
+        
+        # Log total publish time (changed to info for visibility)
+        total_time = time.time() - start_time
+        self.protocol.log("info", f"[ROSBRIDGE LATENCY] Total publish processing for topic '{topic}' took {total_time*1000:.3f}ms")
+        
+        # Log ROS to WebSocket end-to-end latency
+        try:
+            if hasattr(message, 'message') and hasattr(message.message, 'header') and hasattr(message.message.header, 'stamp'):
+                header_sec = message.message.header.stamp.sec
+                header_nanosec = message.message.header.stamp.nanosec
+                header_time = header_sec + header_nanosec / 1e9
+                end_to_end_latency = time.time() - header_time
+                self.protocol.log("info", f"[ROS TO WEBSOCKET] Topic '{topic}' end-to-end latency: {end_to_end_latency*1000:.1f}ms (from header timestamp to WebSocket send)")
+        except Exception:
+            # Not all messages have headers, skip if not available
+            pass
+        
+        # Decrement processing count
+        if hasattr(self, '_processing_count'):
+            self._processing_count -= 1
 
     def finish(self):
         for subscription in self._subscriptions.values():

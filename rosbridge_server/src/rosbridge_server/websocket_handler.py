@@ -189,12 +189,46 @@ class RosbridgeWebSocket(WebSocketHandler):
         else:
             binary = False
 
-        _io_loop.add_callback(partial(self.prewrite_message, message, binary))
-
-    async def prewrite_message(self, message, binary):
+        # Log WebSocket send request with timing
+        import time
+        send_request_time = time.time()
+        
+        # Calculate message size for debug
+        import sys
+        if binary:
+            msg_size = len(message) if hasattr(message, '__len__') else sys.getsizeof(message)
+        else:
+            msg_size = len(str(message))
+        
         cls = self.__class__
+        cls.node_handle.get_logger().info(
+            f"[WEBSOCKET_DEBUG] send_message() called at {send_request_time}, binary={binary}, size={msg_size} bytes"
+        )
+
+        _io_loop.add_callback(partial(self.prewrite_message, message, binary, send_request_time))
+
+    async def prewrite_message(self, message, binary, send_request_time=None):
+        cls = self.__class__
+        
+        # Log timing info for WebSocket write
+        import time
+        prewrite_start = time.time()
+        
+        if send_request_time:
+            queue_delay = prewrite_start - send_request_time
+            cls.node_handle.get_logger().info(
+                f"[WEBSOCKET_DEBUG] prewrite_message() started at {prewrite_start}, queue_delay={queue_delay*1000:.3f}ms"
+            )
+        
         try:
+            write_start = time.time()
             await self.write_message(message, binary)
+            write_elapsed = time.time() - write_start
+            
+            cls.node_handle.get_logger().info(
+                f"[WEBSOCKET_DEBUG] write_message() completed in {write_elapsed*1000:.3f}ms"
+            )
+            
         except WebSocketClosedError:
             cls.node_handle.get_logger().warn(
                 "WebSocketClosedError: Tried to write to a closed websocket",
