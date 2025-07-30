@@ -205,6 +205,7 @@ class RosbridgeWebsocketNode(Node):
         ).value
 
         bson_only_mode = self.declare_parameter("bson_only_mode", False).value
+        verbose_debug_mode = self.declare_parameter("verbose_debug_mode", False).value
 
         RosbridgeWebSocket.client_manager = ClientManager(self)
 
@@ -323,6 +324,12 @@ class RosbridgeWebsocketNode(Node):
             RosbridgeWebSocket.bson_only_mode = True
         else:
             RosbridgeWebSocket.bson_only_mode = bson_only_mode
+
+        # Handle verbose_debug_mode parameter
+        if "--verbose_debug_mode" in sys.argv:
+            RosbridgeWebSocket.verbose_debug_mode = True
+        else:
+            RosbridgeWebSocket.verbose_debug_mode = verbose_debug_mode
 
         # To be able to access the list of topics and services, you must be able to access the rosapi services.
         if RosbridgeWebSocket.services_glob:

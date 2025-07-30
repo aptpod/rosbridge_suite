@@ -106,10 +106,12 @@ class Protocol:
             self.fragment_size = self.parameters["max_message_size"]
             self.delay_between_messages = self.parameters["delay_between_messages"]
             self.bson_only_mode = self.parameters.get("bson_only_mode", False)
+            self.verbose_debug_mode = self.parameters.get("verbose_debug_mode", False)
             
             # Debug: Log bson_only_mode configuration
-            self.log("info", f"[BSON_DEBUG] Protocol initialization - parameters: {self.parameters}")
-            self.log("info", f"[BSON_DEBUG] Protocol initialization - bson_only_mode set to: {self.bson_only_mode}")
+            if self.verbose_debug_mode:
+                self.log("debug", f"[BSON_DEBUG] Protocol initialization - parameters: {self.parameters}")
+                self.log("debug", f"[BSON_DEBUG] Protocol initialization - bson_only_mode set to: {self.bson_only_mode}")
 
     # added default message_string="" to allow recalling incoming until buffer is empty without giving a parameter
     # --> allows to get rid of (..or minimize) delay between client-side sends
@@ -272,7 +274,8 @@ class Protocol:
                 # Log before sending fragments
                 send_time = time.time()
                 topic = message.get("topic", "unknown")
-                self.log("info", f"[ROSBRIDGE LATENCY] Sending {len(fragment_list)} fragments to WebSocket for topic '{topic}' at {send_time:.6f}")
+                if self.verbose_debug_mode:
+                    self.log("debug", f"[ROSBRIDGE LATENCY] Sending {len(fragment_list)} fragments to WebSocket for topic '{topic}' at {send_time:.6f}")
                 
                 for fragment in fragment_list:
                     if self.bson_only_mode:
@@ -288,7 +291,8 @@ class Protocol:
                 send_time = time.time()
                 topic = message.get("topic", "unknown")
                 msg_size = len(serialized) if serialized else 0
-                self.log("info", f"[ROSBRIDGE LATENCY] Sending message to WebSocket for topic '{topic}' at {send_time:.6f} (size: {msg_size} bytes)")
+                if self.verbose_debug_mode:
+                    self.log("debug", f"[ROSBRIDGE LATENCY] Sending message to WebSocket for topic '{topic}' at {send_time:.6f} (size: {msg_size} bytes)")
                 
                 self.outgoing(serialized, compression)
                 time.sleep(self.delay_between_messages)
@@ -327,20 +331,20 @@ class Protocol:
                 if self.bson_only_mode:
                     result = self._encode_bson_with_binary_preservation(msg)
                     elapsed = time.time() - start_time
-                    if elapsed > 0.01:  # Log if serialization takes more than 10ms
+                    if elapsed > 0.01 and self.verbose_debug_mode:  # Log if serialization takes more than 10ms
                         self.log("debug", f"[ROSBRIDGE LATENCY] BSON serialization for topic '{topic}' took {elapsed*1000:.3f}ms")
                     return result
                 else:
                     # Hybrid mode: binary data present but not BSON-only
                     result = bson.BSON.encode(msg)
                     elapsed = time.time() - start_time
-                    if elapsed > 0.01:
+                    if elapsed > 0.01 and self.verbose_debug_mode:
                         self.log("debug", f"[ROSBRIDGE LATENCY] BSON serialization for topic '{topic}' took {elapsed*1000:.3f}ms")
                     return result
             else:
                 result = json.dumps(msg)
                 elapsed = time.time() - start_time
-                if elapsed > 0.01:
+                if elapsed > 0.01 and self.verbose_debug_mode:
                     self.log("debug", f"[ROSBRIDGE LATENCY] JSON serialization for topic '{topic}' took {elapsed*1000:.3f}ms")
                 return result
         except Exception as e:

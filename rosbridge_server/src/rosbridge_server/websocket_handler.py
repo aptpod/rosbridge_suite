@@ -124,6 +124,7 @@ class RosbridgeWebSocket(WebSocketHandler):
     max_message_size = 10000000  # bytes
     unregister_timeout = 10.0  # seconds
     bson_only_mode = False
+    verbose_debug_mode = False
     node_handle = None
 
     @log_exceptions
@@ -135,6 +136,7 @@ class RosbridgeWebSocket(WebSocketHandler):
             "max_message_size": cls.max_message_size,
             "unregister_timeout": cls.unregister_timeout,
             "bson_only_mode": cls.bson_only_mode,
+            "verbose_debug_mode": cls.verbose_debug_mode,
         }
         
         try:
@@ -142,8 +144,9 @@ class RosbridgeWebSocket(WebSocketHandler):
             self.protocol = RosbridgeProtocol(
                 self.client_id, cls.node_handle, parameters=parameters
             )
-            # Configure message_conversion with bson_only_mode
+            # Configure message_conversion with bson_only_mode and verbose_debug_mode
             message_conversion.bson_only_mode = cls.bson_only_mode
+            message_conversion.verbose_debug_mode = cls.verbose_debug_mode
             message_conversion.configure()
             self.incoming_queue = IncomingQueue(self.protocol)
             self.incoming_queue.start()
@@ -201,9 +204,10 @@ class RosbridgeWebSocket(WebSocketHandler):
             msg_size = len(str(message))
         
         cls = self.__class__
-        cls.node_handle.get_logger().info(
-            f"[WEBSOCKET_DEBUG] send_message() called at {send_request_time}, binary={binary}, size={msg_size} bytes"
-        )
+        if cls.verbose_debug_mode:
+            cls.node_handle.get_logger().debug(
+                f"[WEBSOCKET_DEBUG] send_message() called at {send_request_time}, binary={binary}, size={msg_size} bytes"
+            )
 
         _io_loop.add_callback(partial(self.prewrite_message, message, binary, send_request_time))
 
@@ -216,18 +220,20 @@ class RosbridgeWebSocket(WebSocketHandler):
         
         if send_request_time:
             queue_delay = prewrite_start - send_request_time
-            cls.node_handle.get_logger().info(
-                f"[WEBSOCKET_DEBUG] prewrite_message() started at {prewrite_start}, queue_delay={queue_delay*1000:.3f}ms"
-            )
+            if cls.verbose_debug_mode:
+                cls.node_handle.get_logger().debug(
+                    f"[WEBSOCKET_DEBUG] prewrite_message() started at {prewrite_start}, queue_delay={queue_delay*1000:.3f}ms"
+                )
         
         try:
             write_start = time.time()
             await self.write_message(message, binary)
             write_elapsed = time.time() - write_start
             
-            cls.node_handle.get_logger().info(
-                f"[WEBSOCKET_DEBUG] write_message() completed in {write_elapsed*1000:.3f}ms"
-            )
+            if cls.verbose_debug_mode:
+                cls.node_handle.get_logger().debug(
+                    f"[WEBSOCKET_DEBUG] write_message() completed in {write_elapsed*1000:.3f}ms"
+                )
             
         except WebSocketClosedError:
             cls.node_handle.get_logger().warn(
