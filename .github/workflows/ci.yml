@@ -71,14 +71,14 @@ jobs:
           docker compose build
 
           # Then run the test
-          docker compose up --abort-on-container-exit test-client
+          docker compose up --abort-on-container-exit client
 
           # Show container logs if test fails
           echo "📝 Container logs:"
           echo "=== Rosbridge Server Logs ==="
           docker compose logs rosbridge-server || true
           echo "=== Test Client Logs (last 100 lines) ==="
-          docker compose logs --tail=100 test-client || true
+          docker compose logs --tail=100 client || true
 
           # Check test results
           if [ -f results/test-summary.json ]; then
@@ -122,7 +122,7 @@ jobs:
           else
             echo "❌ No test results found"
             echo "🔍 Container logs:"
-            docker compose logs test-client | tail -50
+            docker compose logs client | tail -50
             exit 1
           fi
 
