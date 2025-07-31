@@ -189,6 +189,10 @@ jobs:
       id: tag
       run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
+    - name: Extract commit hash
+      id: commit
+      run: echo "hash=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
     - name: Create release packages
       run: |
         mkdir -p release/
@@ -214,9 +218,15 @@ jobs:
     - name: Load release template
       id: release_template
       run: |
-        TAG_NAME="${{ steps.tag.outputs.tag }}"
+        if [[ "${{ startsWith(github.ref, 'refs/tags/') }}" == "true" ]]; then
+          # Tag exists: use tag name
+          REFERENCE="${{ steps.tag.outputs.tag }}"
+        else
+          # No tag: use commit hash
+          REFERENCE="${{ steps.commit.outputs.hash }}"
+        fi
         echo "body<<EOF" >> $GITHUB_OUTPUT
-        sed "s/TAG_PLACEHOLDER/${TAG_NAME}/g" .github/RELEASE_TEMPLATE.md >> $GITHUB_OUTPUT
+        sed "s/TAG_PLACEHOLDER/${REFERENCE}/g" .github/RELEASE_TEMPLATE.md >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Create Release
