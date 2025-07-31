@@ -326,8 +326,8 @@ class Subscribe(Capability):
             outgoing_msg = message.get_cbor_raw(outgoing_msg)
         else:
             # Check protocol bson_only_mode setting
-            protocol_bson_mode = getattr(self.protocol, 'bson_only_mode', False)
-            
+            protocol_bson_mode = getattr(self.protocol, "bson_only_mode", False)
+
             # Use BSON-optimized path if protocol setting is True
             if protocol_bson_mode:
                 outgoing_msg["msg"] = message.get_bson_values()

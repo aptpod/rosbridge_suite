@@ -37,9 +37,9 @@ import uuid
 from collections import deque
 from functools import partial, wraps
 
+from rosbridge_library.internal import message_conversion
 from rosbridge_library.rosbridge_protocol import RosbridgeProtocol
 from rosbridge_library.util import bson
-from rosbridge_library.internal import message_conversion
 from tornado.ioloop import IOLoop
 from tornado.iostream import StreamClosedError
 from tornado.websocket import WebSocketClosedError, WebSocketHandler
@@ -138,7 +138,7 @@ class RosbridgeWebSocket(WebSocketHandler):
             "bson_only_mode": cls.bson_only_mode,
             "verbose_debug_mode": cls.verbose_debug_mode,
         }
-        
+
         try:
             self.client_id = uuid.uuid4()
             self.protocol = RosbridgeProtocol(
@@ -196,10 +196,10 @@ class RosbridgeWebSocket(WebSocketHandler):
 
     async def prewrite_message(self, message, binary):
         cls = self.__class__
-        
+
         try:
             await self.write_message(message, binary)
-            
+
         except WebSocketClosedError:
             cls.node_handle.get_logger().warn(
                 "WebSocketClosedError: Tried to write to a closed websocket",

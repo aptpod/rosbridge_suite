@@ -125,13 +125,12 @@ def configure(node_handle=None):
     else:
         print("Unknown encoder type '%s'" % binary_encoder_type)
         exit(0)
-    
 
 
 def get_encoder():
     # Legacy function - now uses binary_encoder_type only
     global binary_encoder, binary_encoder_type
-    
+
     # Configure binary_encoder based on type setting
     if binary_encoder_type == "bson":
         binary_encoder = bson.Binary
@@ -139,7 +138,7 @@ def get_encoder():
         binary_encoder = standard_b64encode
     else:
         binary_encoder = standard_b64encode  # fallback
-    
+
     return binary_encoder
 
 
@@ -177,10 +176,10 @@ class FieldTypeMismatchException(Exception):
 
 def extract_values(inst, bson_only_mode=False):
     rostype = msg_instance_type_repr(inst)
-    
+
     if rostype is None:
         raise InvalidMessageException(inst=inst)
-    
+
     return _from_inst(inst, rostype, bson_only_mode)
 
 
@@ -207,22 +206,22 @@ def msg_instance_type_repr(msg_inst):
     # Optimized version: Avoid expensive str(msg_inst) call for large messages
     # A representation like '_type' member in ROS1 messages is needed: '{package}/{message_name}'.
     # E.g: 'std_msgs/Header'
-    
+
     msg_type = type(msg_inst)
     if msg_type in primitive_types or msg_type in list_types:
         return str(msg_type)
-    
+
     # OPTIMIZATION: Get type info directly from class attributes instead of str(msg_inst)
     # This avoids expensive serialization of large messages (e.g., 3.8MB PointCloud2)
     module_name = msg_type.__module__  # e.g., 'sensor_msgs.msg._point_cloud2'
-    class_name = msg_type.__name__     # e.g., 'PointCloud2'
-    
+    class_name = msg_type.__name__  # e.g., 'PointCloud2'
+
     # Parse module name: 'sensor_msgs.msg._point_cloud2' -> 'sensor_msgs'
-    parts = module_name.split('.')
-    if len(parts) >= 2 and parts[1] == 'msg':
+    parts = module_name.split(".")
+    if len(parts) >= 2 and parts[1] == "msg":
         package = parts[0]  # 'sensor_msgs'
         return f"{package}/{class_name}"
-    
+
     # Fallback for unexpected module structure
     return f"{module_name}/{class_name}"
 
@@ -240,7 +239,7 @@ def _from_inst(inst, rostype, bson_only_mode=False):
     # Special case for uint8[], we encode the string
     for binary_type, expression in ros_binary_types_list_braces:
         match_result = expression.sub(binary_type, rostype)
-        
+
         if match_result in ros_binary_types:
             # Use passed parameter instead of global variable for better control
             if bson_only_mode:
@@ -315,14 +314,14 @@ def _from_object_inst_zero_copy(inst, rostype):
     """Zero-copy optimized message conversion for BSON mode."""
     fields_and_types = inst.get_fields_and_field_types()
     msg = {}
-    
+
     for field_name, field_rostype in fields_and_types.items():
         field_inst = getattr(inst, field_name)
         if _is_binary_field(field_rostype):
             msg[field_name] = _create_zero_copy_binary(field_inst)
         else:
             msg[field_name] = _from_inst(field_inst, field_rostype, bson_only_mode=True)
-    
+
     return msg
 
 
@@ -333,7 +332,7 @@ def _from_object_inst_standard(inst, rostype, bson_only_mode=False):
     for field_name, field_rostype in inst.get_fields_and_field_types().items():
         field_inst = getattr(inst, field_name)
         msg[field_name] = _from_inst(field_inst, field_rostype, bson_only_mode)
-    
+
     return msg
 
 
@@ -350,44 +349,46 @@ def _is_binary_field(field_rostype):
 def _create_zero_copy_binary(field_inst):
     """Create BSON Binary with zero-copy optimization."""
     from rosbridge_library.util import bson
-    
+
     # ROS2 array.array optimization (most common case for PointCloud2)
-    if hasattr(field_inst, 'tobytes'):
+    if hasattr(field_inst, "tobytes"):
         try:
             byte_data = field_inst.tobytes()
             return bson.Binary(byte_data)
         except (TypeError, AttributeError):
             pass
-    
+
     # Direct memory view optimization for NumPy arrays
-    if hasattr(field_inst, '__array_interface__'):
+    if hasattr(field_inst, "__array_interface__"):
         try:
             memory_view = memoryview(field_inst)
             return bson.Binary(memory_view)
         except (TypeError, BufferError):
             pass
-    
+
     # Python buffer protocol support
     try:
         memory_view = memoryview(field_inst)
         return bson.Binary(memory_view)
     except (TypeError, ValueError):
         pass
-    
+
     # Bytes-like objects optimization
     if isinstance(field_inst, (bytes, bytearray)):
         return bson.Binary(field_inst)
-    
+
     # List/tuple of integers (fallback for uint8 arrays)
     if isinstance(field_inst, (list, tuple)) and field_inst:
-        is_byte_array = all(isinstance(x, int) and 0 <= x <= 255 for x in field_inst[:10])  # Sample check
+        is_byte_array = all(
+            isinstance(x, int) and 0 <= x <= 255 for x in field_inst[:10]
+        )  # Sample check
         if is_byte_array:
             try:
                 byte_data = bytes(field_inst)
                 return bson.Binary(byte_data)
             except (ValueError, TypeError):
                 pass
-    
+
     # Fallback to standard BSON Binary creation
     return bson.Binary(field_inst)
 
@@ -419,9 +420,9 @@ def _to_inst(msg, rostype, roottype, clock=ROSClock(), inst=None, stack=[]):
 
 def _to_binary_inst(msg):
     global bson_only_mode
-    
+
     # Handle BSON Binary objects (only in BSON mode)
-    if bson_only_mode and hasattr(msg, '__class__') and 'Binary' in str(type(msg)):
+    if bson_only_mode and hasattr(msg, "__class__") and "Binary" in str(type(msg)):
         # Extract bytes from BSON Binary object
         data = array.array("B")
         data.frombytes(bytes(msg))

@@ -107,11 +107,16 @@ class Protocol:
             self.delay_between_messages = self.parameters["delay_between_messages"]
             self.bson_only_mode = self.parameters.get("bson_only_mode", False)
             self.verbose_debug_mode = self.parameters.get("verbose_debug_mode", False)
-            
+
             # Debug: Log bson_only_mode configuration
             if self.verbose_debug_mode:
-                self.log("debug", f"[BSON_DEBUG] Protocol initialization - parameters: {self.parameters}")
-                self.log("debug", f"[BSON_DEBUG] Protocol initialization - bson_only_mode set to: {self.bson_only_mode}")
+                self.log(
+                    "debug", f"[BSON_DEBUG] Protocol initialization - parameters: {self.parameters}"
+                )
+                self.log(
+                    "debug",
+                    f"[BSON_DEBUG] Protocol initialization - bson_only_mode set to: {self.bson_only_mode}",
+                )
 
     # added default message_string="" to allow recalling incoming until buffer is empty without giving a parameter
     # --> allows to get rid of (..or minimize) delay between client-side sends
@@ -308,7 +313,7 @@ class Protocol:
         try:
             if isinstance(msg, bytearray):
                 return msg
-            
+
             if has_binary(msg) or self.bson_only_mode:
                 # BSON-only mode: always use custom encoding for efficiency
                 if self.bson_only_mode:
@@ -427,37 +432,36 @@ class Protocol:
         else:
             self.node_handle.get_logger().debug(stdout_formatted_msg)
 
-
     def _encode_bson_with_binary_preservation(self, msg):
         """Custom BSON encoding that preserves binary objects efficiently.
-        
-        This method ensures that BSON Binary objects remain as efficient 
+
+        This method ensures that BSON Binary objects remain as efficient
         binary data without double-encoding issues by creating a specialized
         BSON document structure.
         """
         try:
             # Create a copy of the message to avoid modifying the original
             msg_copy = self._prepare_message_for_binary_optimization(msg)
-            
+
             # Use BSON encoding with the optimized message structure
             encoded = bson.BSON.encode(msg_copy)
-            
+
             return encoded
-            
+
         except Exception:
             # Fallback to standard encoding
             return bson.BSON.encode(msg)
-    
+
     def _prepare_message_for_binary_optimization(self, msg):
         """Prepare message structure to optimize BSON Binary objects."""
         import copy
-        
+
         # Create a deep copy to avoid modifying the original
         msg_copy = copy.deepcopy(msg)
-        
+
         # Special handling for messages with binary data
-        if isinstance(msg_copy, dict) and 'msg' in msg_copy:
-            inner_msg = msg_copy['msg']
+        if isinstance(msg_copy, dict) and "msg" in msg_copy:
+            inner_msg = msg_copy["msg"]
             if isinstance(inner_msg, dict):
                 # Look for binary fields that might need special handling
                 for key, value in inner_msg.items():
@@ -465,6 +469,5 @@ class Protocol:
                         # Keep the Binary object as-is for efficient encoding
                         # The BSON encoder should handle this natively
                         pass
-        
-        return msg_copy
 
+        return msg_copy
