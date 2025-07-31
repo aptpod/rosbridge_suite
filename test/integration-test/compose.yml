@@ -74,11 +74,16 @@ services:
     command: >
       /bin/bash -c "
         source /opt/ros/humble/setup.bash &&
-        apt-get update &&
-        apt-get install -y python3-numpy ros-humble-sensor-msgs ros-humble-demo-nodes-cpp ros-humble-example-interfaces ros-humble-std-srvs &&
+        echo 'Installing required packages...' &&
+        apt-get update -qq &&
+        apt-get install -y -qq python3-numpy ros-humble-sensor-msgs ros-humble-demo-nodes-cpp ros-humble-example-interfaces ros-humble-std-srvs &&
+        echo 'Starting ROS nodes...' &&
         python3 /app/scripts/echo_services.py &
+        echo 'Starting talker...' &&
         ros2 run demo_nodes_cpp talker &
+        echo 'Starting PointCloud2 publisher...' &&
         python3 /app/scripts/pointcloud2_publisher.py &
+        echo 'All ROS nodes started, waiting...' &&
         sleep infinity
       "
     depends_on:

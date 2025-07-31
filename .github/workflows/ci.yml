@@ -74,9 +74,9 @@ jobs:
           echo "Starting ROS nodes and rosbridge servers..."
           docker compose up -d ros-master ros_nodes rosbridge rosbridge-bson
 
-          # Wait for services to be ready
+          # Wait for services to be ready (extended for ROS node startup)
           echo "Waiting for services to be ready..."
-          sleep 15
+          sleep 30
 
           # Then run the test
           docker compose up --abort-on-container-exit client
