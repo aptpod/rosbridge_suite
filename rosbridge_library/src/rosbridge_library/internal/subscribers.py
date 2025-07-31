@@ -31,7 +31,6 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import time
 from threading import Lock, RLock
 
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
@@ -122,54 +121,13 @@ class MultiSubscriber:
 
         infos = node_handle.get_publishers_info_by_topic(topic)
 
-        # Log initial QoS settings
-        node_handle.get_logger().info(
-            f"[QOS_DEBUG] Topic '{topic}' - Initial subscriber QoS: reliability={qos.reliability.name}, durability={qos.durability.name}, depth={qos.depth}"
-        )
-
-        # Log detected publishers and their QoS settings
-        if len(infos) > 0:
-            node_handle.get_logger().info(
-                f"[QOS_DEBUG] Topic '{topic}' - Found {len(infos)} publisher(s)"
-            )
-            for i, pub in enumerate(infos):
-                node_handle.get_logger().info(
-                    f"[QOS_DEBUG] Topic '{topic}' - Publisher {i + 1}: "
-                    f"reliability={pub.qos_profile.reliability.name}, "
-                    f"durability={pub.qos_profile.durability.name}, "
-                    f"depth={pub.qos_profile.depth}"
-                )
-        else:
-            node_handle.get_logger().info(
-                f"[QOS_DEBUG] Topic '{topic}' - No publishers detected yet"
-            )
-
-        # QoS adaptation logic with detailed logging
         if len(infos) > 0 and all(
             pub.qos_profile.durability == DurabilityPolicy.TRANSIENT_LOCAL for pub in infos
         ):
-            old_reliability = qos.reliability.name
-            old_durability = qos.durability.name
             qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
             qos.reliability = ReliabilityPolicy.RELIABLE
-            node_handle.get_logger().info(
-                f"[QOS_DEBUG] Topic '{topic}' - QoS adapted for TRANSIENT_LOCAL: "
-                f"reliability {old_reliability}->{qos.reliability.name}, "
-                f"durability {old_durability}->{qos.durability.name}"
-            )
-
         if any(pub.qos_profile.reliability == ReliabilityPolicy.BEST_EFFORT for pub in infos):
-            old_reliability = qos.reliability.name
             qos.reliability = ReliabilityPolicy.BEST_EFFORT
-            node_handle.get_logger().info(
-                f"[QOS_DEBUG] Topic '{topic}' - QoS adapted for BEST_EFFORT: "
-                f"reliability {old_reliability}->{qos.reliability.name}"
-            )
-
-        # Log final QoS settings
-        node_handle.get_logger().info(
-            f"[QOS_DEBUG] Topic '{topic}' - Final subscriber QoS: reliability={qos.reliability.name}, durability={qos.durability.name}, depth={qos.depth}"
-        )
 
         # Create the subscriber and associated member variables
         # Subscriptions is initialized with the current client to start with.
@@ -228,54 +186,12 @@ class MultiSubscriber:
             self.new_subscriptions.update({client_id: callback})
             infos = self.node_handle.get_publishers_info_by_topic(self.topic)
 
-            # Log QoS re-evaluation on new subscription
-            self.node_handle.get_logger().info(
-                f"[QOS_DEBUG] Topic '{self.topic}' - New subscription request from client {client_id}"
-            )
-            self.node_handle.get_logger().info(
-                f"[QOS_DEBUG] Topic '{self.topic}' - Current subscriber QoS: reliability={self.qos.reliability.name}, durability={self.qos.durability.name}"
-            )
-
-            # Log current publishers for QoS re-evaluation
-            if len(infos) > 0:
-                self.node_handle.get_logger().info(
-                    f"[QOS_DEBUG] Topic '{self.topic}' - Re-evaluating QoS with {len(infos)} publisher(s)"
-                )
-                for i, pub in enumerate(infos):
-                    self.node_handle.get_logger().info(
-                        f"[QOS_DEBUG] Topic '{self.topic}' - Publisher {i + 1}: "
-                        f"reliability={pub.qos_profile.reliability.name}, "
-                        f"durability={pub.qos_profile.durability.name}"
-                    )
-            else:
-                self.node_handle.get_logger().info(
-                    f"[QOS_DEBUG] Topic '{self.topic}' - No publishers detected during re-evaluation"
-                )
-
-            # QoS adaptation with logging
-            old_durability = self.qos.durability.name
-            old_reliability = self.qos.reliability.name
-
             if len(infos) > 0 and all(
                 pub.qos_profile.durability == DurabilityPolicy.TRANSIENT_LOCAL for pub in infos
             ):
                 self.qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
-                if self.qos.durability.name != old_durability:
-                    self.node_handle.get_logger().info(
-                        f"[QOS_DEBUG] Topic '{self.topic}' - QoS durability updated: {old_durability}->{self.qos.durability.name}"
-                    )
-
             if any(pub.qos_profile.reliability == ReliabilityPolicy.BEST_EFFORT for pub in infos):
                 self.qos.reliability = ReliabilityPolicy.BEST_EFFORT
-                if self.qos.reliability.name != old_reliability:
-                    self.node_handle.get_logger().info(
-                        f"[QOS_DEBUG] Topic '{self.topic}' - QoS reliability updated: {old_reliability}->{self.qos.reliability.name}"
-                    )
-
-            # Log final QoS after re-evaluation
-            self.node_handle.get_logger().info(
-                f"[QOS_DEBUG] Topic '{self.topic}' - Final QoS after re-evaluation: reliability={self.qos.reliability.name}, durability={self.qos.durability.name}"
-            )
 
             if self.new_subscriber is None:
                 self.new_subscriber = self.node_handle.create_subscription(
@@ -315,52 +231,6 @@ class MultiSubscriber:
         callbacks - subscriber callbacks to invoke
 
         """
-        # Log message reception from ROS node with timestamp
-        receive_time = time.time()
-
-        # Extract header timestamp if available (for messages with header field)
-        header_timestamp_str = ""
-        header_time = None
-        try:
-            if hasattr(msg, "header") and hasattr(msg.header, "stamp"):
-                header_sec = msg.header.stamp.sec
-                header_nanosec = msg.header.stamp.nanosec
-                header_time = header_sec + header_nanosec / 1e9
-                delay = receive_time - header_time
-                header_timestamp_str = (
-                    f", header_time={header_time:.6f}, delay={delay * 1000:.1f}ms"
-                )
-        except Exception:
-            # Not all messages have headers, skip if not available
-            pass
-
-        # Check for message interval analysis (detect drops or delays)
-        interval_analysis = ""
-        if hasattr(self, "last_header_time") and hasattr(self, "last_receive_time") and header_time:
-            # Calculate intervals
-            header_interval = header_time - self.last_header_time
-            receive_interval = receive_time - self.last_receive_time
-            interval_diff = abs(receive_interval - header_interval)
-
-            # Log interval analysis
-            interval_analysis = f", header_interval={header_interval:.3f}s, receive_interval={receive_interval:.3f}s, diff={interval_diff:.3f}s"
-
-            # Detect potential message drops (significant interval differences)
-            if interval_diff > 1.0:  # More than 1 second difference
-                self.node_handle.get_logger().warn(
-                    f"[MESSAGE DROP WARNING] Topic '{self.topic}': Large interval difference detected! "
-                    f"Expected: {header_interval:.3f}s, Actual: {receive_interval:.3f}s, Diff: {interval_diff:.3f}s"
-                )
-
-        # Store current timestamps for next interval calculation
-        if header_time:
-            self.last_header_time = header_time
-        self.last_receive_time = receive_time
-
-        self.node_handle.get_logger().info(
-            f"[ROSBRIDGE LATENCY] Received ROS message on topic '{self.topic}' at {receive_time:.6f}{header_timestamp_str}{interval_analysis}"
-        )
-
         outgoing = OutgoingMessage(msg)
 
         with self.rlock:
