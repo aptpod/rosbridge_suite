@@ -214,8 +214,9 @@ jobs:
     - name: Load release template
       id: release_template
       run: |
+        TAG_NAME="${{ steps.tag.outputs.tag }}"
         echo "body<<EOF" >> $GITHUB_OUTPUT
-        cat .github/RELEASE_TEMPLATE.md >> $GITHUB_OUTPUT
+        sed "s/TAG_PLACEHOLDER/${TAG_NAME}/g" .github/RELEASE_TEMPLATE.md >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Create Release
