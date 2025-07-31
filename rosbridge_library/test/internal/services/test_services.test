@@ -1,0 +1,4 @@
+<launch>
+  <!-- Test service-related components -->
+  <test test-name="test_services" pkg="rosbridge_library" type="test_services.py" />
+</launch>
