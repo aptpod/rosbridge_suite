@@ -177,6 +177,9 @@ jobs:
       contents: write  # Release作成とアップロードに必要
 
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
@@ -208,6 +211,13 @@ jobs:
         echo "Release packages created:"
         ls -la release/
 
+    - name: Load release template
+      id: release_template
+      run: |
+        echo "body<<EOF" >> $GITHUB_OUTPUT
+        cat .github/RELEASE_TEMPLATE.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
     - name: Create Release
       uses: actions/create-release@v1
       id: create_release
@@ -216,54 +226,7 @@ jobs:
       with:
         tag_name: ${{ steps.tag.outputs.tag }}
         release_name: ROS 2 rosbridge_suite with BSON support ${{ steps.tag.outputs.tag }}
-        body: |
-          ## ROS 2 rosbridge_suite with BSON support
-
-          This release contains Debian packages for ROS 2 Humble with BSON serialization support.
-
-          ### Supported Architectures
-          - **amd64**: Standard x86_64 Linux systems
-          - **arm64**: ARM64 systems (Raspberry Pi 4, Apple Silicon, etc.)
-
-          ### Installation
-
-          1. Download the appropriate zip file for your architecture
-          2. Extract the zip file
-          3. Install dependencies and the package:
-
-          ```bash
-          # Install dependencies
-          sudo apt update
-          sudo apt install -y python3-twisted python3-tornado python3-autobahn python3-pymongo python3-pil
-
-          # Install the package
-          sudo apt install -y ./ros-humble-rosbridge-suite_*.deb
-
-          # Use the package
-          source /opt/ros/humble/setup.bash
-
-          # JSON-only mode (default)
-          ros2 launch rosbridge_server rosbridge_websocket_launch.xml
-          # or explicitly
-          ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=false
-
-          # BSON-only mode for better performance
-          ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=true
-          ```
-
-          ### What's Included
-          - rosbridge_library with BSON support
-          - rosbridge_server WebSocket server
-          - rosapi ROS API services
-          - All necessary message definitions
-          - Installation documentation (INSTALL.md)
-
-          ### BSON Mode
-          This package provides exclusive mode selection:
-          - **Standard mode**: JSON-only (default)
-          - **BSON-only mode**: Better performance for binary data, BSON clients only
-
-          The WebSocket server will be available at `ws://localhost:9090` with BSON support enabled.
+        body: ${{ steps.release_template.outputs.body }}
         draft: false
         prerelease: false
 
