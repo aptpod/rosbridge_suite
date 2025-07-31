@@ -146,6 +146,43 @@ ros2 launch rosbridge_server rosbridge_websocket_launch.xml --ros-args --log-lev
 sudo apt install python3-twisted python3-tornado python3-autobahn python3-pymongo python3-pil
 ```
 
+#### 4. GitHub Actions CI/CD関連
+
+**問題**: lint job失敗
+```
+end-of-file-fixer Failed
+trailing-whitespace Failed
+```
+
+**解決策**:
+```bash
+# ローカルでlint修正
+pre-commit run --all-files
+
+# 修正をコミット・プッシュ
+git add -A
+git commit -m "fix: Apply pre-commit formatting fixes"
+git push
+```
+
+**問題**: Build packages失敗（sed syntax error）
+```
+sed: can't read TAG_PLACEHOLDER: No such file or directory
+```
+
+**解決策**:
+- コミットハッシュ/タグ参照の動的置換が正常動作
+- RELEASE_TEMPLATE.mdの`TAG_PLACEHOLDER`が適切に置換される
+
+#### 5. ROS 2テスト関連
+
+**問題**: ros-tooling/action-ros-ci失敗
+**解決策**: ROS 1形式の`.test`ファイルが混在していないか確認
+```bash
+# 不要な.testファイルを削除（ROS 2はpytestを使用）
+find . -name "*.test" -type f
+```
+
 ## カスタマイズ
 
 ### 個別パッケージビルド
@@ -485,6 +522,39 @@ BSON対応は`rosbridge_server/src/rosbridge_server/websocket_handler.py`に実�
   - 共有ライブラリ(.so): ~250KB
   - 設定・メタデータ: ~100KB
 
+## 性能解析・デバッグ
+
+### BSON効率化の詳細
+現在実装されているBSON最適化：
+
+#### 1. メッセージ変換高速化
+- **Before**: `str(msg_inst)`による全データシリアライズ（250ms）
+- **After**: 直接型属性アクセス（0.05ms）
+- **改善率**: 約5000倍高速化
+
+#### 2. Binary効率化
+- **Before**: Base64エンコーディング（33%オーバーヘッド）
+- **After**: BSON Binaryオブジェクト（バイナリ直接処理）
+- **効果**: 約20%データサイズ削減
+
+#### 3. 文字列変換最適化
+- **Before**: `len(str(result))`による12MB文字列変換（80-110ms）
+- **After**: 概算サイズ計算（1-2ms）
+- **改善率**: 50-100倍高速化
+
+### デバッグ情報の活用
+verbose debug modeによる詳細ログ（開発時のみ）：
+
+```bash
+# デバッグログ有効化
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml verbose_debug_mode:=true
+
+# ログカテゴリ
+[BSON_DEBUG]: BSON効率化詳細
+[ROSBRIDGE LATENCY]: レスポンス遅延分析
+[WEBSOCKET_DEBUG]: WebSocket送信詳細
+```
+
 ## 統合テスト
 
 ### 概要
@@ -582,3 +652,30 @@ BSON専用モードの利点：
 - **データサイズ**: バイナリ形式による効率的なデータ表現
 - **パース速度**: バイナリ処理による高速化
 - **メモリ使用量**: 効率的なバイナリ表現
+
+## 開発プロセス改善
+
+### リリースノートのテンプレート化
+効率的なCI/CD運用のため、リリースノートをテンプレート化：
+
+- **テンプレートファイル**: `.github/RELEASE_TEMPLATE.md`
+- **動的リンク生成**: タグ/コミットハッシュに応じたドキュメントリンク
+- **保守性向上**: Pipeline内でのMarkdown生成を排除
+
+### コミット前チェック必須事項
+```bash
+# 全てのコミット前に必須実行
+pre-commit run --all-files
+
+# 主要チェック項目
+- end-of-file-fixer: ファイル末尾改行
+- trailing-whitespace: 行末空白削除
+- black: Pythonコード整形
+- flake8: コード品質チェック
+```
+
+### git操作のベストプラクティス
+- **コミットメッセージ**: Conventional Commits形式
+- **Claude署名**: 省略（プロジェクト方針）
+- **lint必須**: コミット前に`pre-commit`実行
+- **明示的操作**: push/commitは明示的指示時のみ
