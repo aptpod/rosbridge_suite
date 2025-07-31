@@ -271,12 +271,6 @@ class Protocol:
 
             # fragment list not empty -> send fragments
             if fragment_list is not None:
-                # Log before sending fragments
-                send_time = time.time()
-                topic = message.get("topic", "unknown")
-                if self.verbose_debug_mode:
-                    self.log("debug", f"[ROSBRIDGE LATENCY] Sending {len(fragment_list)} fragments to WebSocket for topic '{topic}' at {send_time:.6f}")
-                
                 for fragment in fragment_list:
                     if self.bson_only_mode:
                         self.outgoing(bson.BSON.encode(fragment), compression)
@@ -287,13 +281,6 @@ class Protocol:
                     time.sleep(self.delay_between_messages)
             # else send message as it is
             else:
-                # Log before sending to WebSocket with timestamp
-                send_time = time.time()
-                topic = message.get("topic", "unknown")
-                msg_size = len(serialized) if serialized else 0
-                if self.verbose_debug_mode:
-                    self.log("debug", f"[ROSBRIDGE LATENCY] Sending message to WebSocket for topic '{topic}' at {send_time:.6f} (size: {msg_size} bytes)")
-                
                 self.outgoing(serialized, compression)
                 time.sleep(self.delay_between_messages)
 
@@ -319,34 +306,18 @@ class Protocol:
         Returns a JSON string representing the dictionary
         """
         try:
-            # Log start of serialization for large messages
-            start_time = time.time()
-            topic = msg.get("topic", "unknown")
-            
             if isinstance(msg, bytearray):
                 return msg
             
             if has_binary(msg) or self.bson_only_mode:
                 # BSON-only mode: always use custom encoding for efficiency
                 if self.bson_only_mode:
-                    result = self._encode_bson_with_binary_preservation(msg)
-                    elapsed = time.time() - start_time
-                    if elapsed > 0.01 and self.verbose_debug_mode:  # Log if serialization takes more than 10ms
-                        self.log("debug", f"[ROSBRIDGE LATENCY] BSON serialization for topic '{topic}' took {elapsed*1000:.3f}ms")
-                    return result
+                    return self._encode_bson_with_binary_preservation(msg)
                 else:
                     # Hybrid mode: binary data present but not BSON-only
-                    result = bson.BSON.encode(msg)
-                    elapsed = time.time() - start_time
-                    if elapsed > 0.01 and self.verbose_debug_mode:
-                        self.log("debug", f"[ROSBRIDGE LATENCY] BSON serialization for topic '{topic}' took {elapsed*1000:.3f}ms")
-                    return result
+                    return bson.BSON.encode(msg)
             else:
-                result = json.dumps(msg)
-                elapsed = time.time() - start_time
-                if elapsed > 0.01 and self.verbose_debug_mode:
-                    self.log("debug", f"[ROSBRIDGE LATENCY] JSON serialization for topic '{topic}' took {elapsed*1000:.3f}ms")
-                return result
+                return json.dumps(msg)
         except Exception as e:
             self.log("error", f"Unable to serialize message '{msg}': {e}")
             return None
