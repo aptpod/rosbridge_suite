@@ -1,4 +1,0 @@
-<launch>
-  <!-- Test action-related components -->
-  <test test-name="test_actions" pkg="rosbridge_library" type="test_actions.py" />
-</launch>
