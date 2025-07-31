@@ -70,13 +70,25 @@ jobs:
           # Build all services first
           docker compose build
 
+          # Start all required services including BSON mode server
+          echo "Starting ROS nodes and rosbridge servers..."
+          docker compose up -d ros-master ros_nodes rosbridge rosbridge-bson
+
+          # Wait for services to be ready
+          echo "Waiting for services to be ready..."
+          sleep 15
+
           # Then run the test
           docker compose up --abort-on-container-exit client
 
           # Show container logs if test fails
           echo "📝 Container logs:"
-          echo "=== Rosbridge Server Logs ==="
-          docker compose logs rosbridge-server || true
+          echo "=== Rosbridge JSON Server Logs ==="
+          docker compose logs rosbridge || true
+          echo "=== Rosbridge BSON Server Logs ==="
+          docker compose logs rosbridge-bson || true
+          echo "=== ROS Nodes Logs ==="
+          docker compose logs ros_nodes || true
           echo "=== Test Client Logs (last 100 lines) ==="
           docker compose logs --tail=100 client || true
 
