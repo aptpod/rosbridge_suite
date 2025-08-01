@@ -97,10 +97,9 @@ services:
         python3 /app/scripts/chatter_publisher.py &
         sleep 3
 
-        # Temporarily disable PointCloud2 for debugging
-        # echo '[START] Starting PointCloud2 publisher...'
-        # python3 /app/scripts/pointcloud2_publisher.py &
-        # sleep 5
+        echo '[START] Starting PointCloud2 publisher...'
+        python3 /app/scripts/pointcloud2_publisher.py &
+        sleep 5
 
         # Topic verification and diagnosis
         echo '[VERIFY] Waiting for topics to be ready...'
