@@ -36,10 +36,10 @@ WORKDIR /workspace
 RUN mkdir -p /output
 
 # Copy the build script
-COPY docker/build-single-deb.sh /workspace/
+COPY docker/build-debian-package.sh /workspace/
 
 # Make the build script executable
-RUN chmod +x /workspace/build-single-deb.sh
+RUN chmod +x /workspace/build-debian-package.sh
 
-# Default command - use single package build
-CMD ["/workspace/build-single-deb.sh"]
+# Default command - use optimized Debian package build
+CMD ["/workspace/build-debian-package.sh"]
