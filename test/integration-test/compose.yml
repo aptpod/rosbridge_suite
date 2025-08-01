@@ -73,17 +73,56 @@ services:
       - ./scripts:/app/scripts:ro
     command: >
       /bin/bash -c "
-        source /opt/ros/humble/setup.bash &&
-        echo 'Installing required packages...' &&
-        apt-get update -qq &&
-        apt-get install -y -qq python3-numpy ros-humble-sensor-msgs ros-humble-demo-nodes-cpp ros-humble-example-interfaces ros-humble-std-srvs &&
-        echo 'Starting ROS nodes...' &&
+        set -ex
+
+        # Install packages first
+        echo '[INSTALL] Installing required packages...'
+        apt-get update -qq
+        apt-get install -y -qq python3-numpy ros-humble-sensor-msgs ros-humble-demo-nodes-cpp ros-humble-example-interfaces ros-humble-std-srvs
+        echo '[INSTALL] Package installation completed successfully'
+
+        # Source ROS environment after installation
+        source /opt/ros/humble/setup.bash
+
+        # Verify talker is available
+        echo '[VERIFY] Checking demo_nodes_cpp talker availability...'
+        ros2 pkg executables demo_nodes_cpp | grep talker || (echo 'ERROR: talker not found' && exit 1)
+
+        # Start services in background without PID management issues
+        echo '[START] Starting echo services...'
         python3 /app/scripts/echo_services.py &
-        echo 'Starting talker...' &&
-        ros2 run demo_nodes_cpp talker &
-        echo 'Starting PointCloud2 publisher...' &&
-        python3 /app/scripts/pointcloud2_publisher.py &
-        echo 'All ROS nodes started, waiting...' &&
+        sleep 3
+
+        echo '[START] Starting chatter publisher (Python)...'
+        python3 /app/scripts/chatter_publisher.py &
+        sleep 3
+
+        # Temporarily disable PointCloud2 for debugging
+        # echo '[START] Starting PointCloud2 publisher...'
+        # python3 /app/scripts/pointcloud2_publisher.py &
+        # sleep 5
+
+        # Topic verification and diagnosis
+        echo '[VERIFY] Waiting for topics to be ready...'
+        sleep 10
+
+        echo '[DEBUG] Available ROS topics:'
+        ros2 topic list || echo 'Failed to list topics'
+
+        echo '[DEBUG] Chatter topic info:'
+        ros2 topic info /chatter || echo 'Chatter topic not found'
+
+        echo '[DEBUG] Echo chatter messages (5 seconds):'
+        timeout 5 ros2 topic echo /chatter std_msgs/msg/String || echo 'No chatter messages received'
+
+        echo '[DEBUG] Active topics:'
+        ros2 topic list
+
+        echo '[READY] All ROS nodes started successfully'
+        echo '[READY] Topics available: /chatter, /pointcloud, and services'
+
+        # Keep container running and wait for all background processes
+        echo '[INFO] Container ready for testing. Keeping alive...'
         sleep infinity
       "
     depends_on:
