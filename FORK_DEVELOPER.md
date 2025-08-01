@@ -172,7 +172,7 @@ sed: can't read TAG_PLACEHOLDER: No such file or directory
 
 **解決策**:
 - コミットハッシュ/タグ参照の動的置換が正常動作
-- RELEASE_TEMPLATE.mdの`TAG_PLACEHOLDER`が適切に置換される
+- templates/ci-cd/RELEASE_TEMPLATE.mdの`TAG_PLACEHOLDER`が適切に置換される
 
 #### 5. ROS 2テスト関連
 
@@ -190,7 +190,7 @@ find . -name "*.test" -type f
 Dockerファイルは`docker/`ディレクトリに整理されています：
 
 - `docker/Dockerfile.debian-build` - ビルド環境用Dockerfile
-- `docker/build-single-deb.sh` - パッケージビルドスクリプト
+- `docker/build-debian-package.sh` - パッケージビルドスクリプト
 
 手動でDockerを使用する場合：
 
@@ -655,9 +655,24 @@ BSON専用モードの利点：
 
 ## 開発プロセス改善
 
-### リリースノートのテンプレート化
-効率的なCI/CD運用のため、リリースノートをテンプレート化：
+### テンプレートファイル
 
-- **テンプレートファイル**: `.github/RELEASE_TEMPLATE.md`
-- **動的リンク生成**: タグ/コミットハッシュに応じたドキュメントリンク
-- **保守性向上**: Pipeline内でのMarkdown生成を排除
+プロジェクト全体で一貫したテンプレート管理を実現：
+
+#### テンプレートアーキテクチャ
+```
+templates/                      # 統一テンプレートシステム
+├── ci-cd/                      # CI/CD・ビルド関連
+│   ├── INSTALL_TEMPLATE.md     # インストール手順
+│   └── RELEASE_TEMPLATE.md     # リリースノート
+└── debian/                     # Debianパッケージ関連
+    ├── control.template        # パッケージメタデータ
+    ├── postinst.template       # インストール後スクリプト
+    └── prerm.template          # 削除前スクリプト
+```
+
+#### システムの利点
+- **保守性向上**: スクリプトからテンプレートを分離し、GitHub UI上で直接編集可能
+- **品質統一**: 全Debianパッケージで一貫したメタデータ・スクリプト品質
+- **変更追跡**: Git履歴による明確なテンプレート変更管理
+- **動的リンク生成**: タグ/コミットハッシュに応じたドキュメントリンク自動生成
