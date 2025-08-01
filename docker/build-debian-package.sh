@@ -347,62 +347,45 @@ determine_package_version() {
 
 create_control_file() {
     local arch="$1"
+    local template_file="$SOURCE_DIR/.github/templates/debian-control.template"
     
-    cat > debian/DEBIAN/control << EOF
-Package: ros-$ROS_DISTRO-rosbridge-suite
-Version: $PACKAGE_VERSION
-Section: misc
-Priority: optional
-Architecture: $arch
-Depends: ros-$ROS_DISTRO-ros-base, python3-twisted, python3-tornado, python3-autobahn, python3-pymongo, python3-pil
-Maintainer: ROS Tooling <ros-tooling@foxglove.dev>
-Description: ROS 2 rosbridge suite with BSON support
- The rosbridge suite contains packages for creating WebSocket bridges
- to ROS 2 systems. This version includes BSON serialization support
- for improved performance with binary data.
- .
- This package includes:
- - rosbridge_library (core functionality with BSON support)
- - rosbridge_server (WebSocket server)
- - rosapi (ROS API services)
- - Message definitions
-EOF
+    if [ ! -f "$template_file" ]; then
+        log_error "Debian control template not found at $template_file"
+        log_error "This file is required for generating control file."
+        exit 1
+    fi
+    
+    log_debug "Creating control file from template..."
+    sed "s/ROS_DISTRO_PLACEHOLDER/$ROS_DISTRO/g; s/VERSION_PLACEHOLDER/$PACKAGE_VERSION/g; s/ARCH_PLACEHOLDER/$arch/g" \
+        "$template_file" > debian/DEBIAN/control
 }
 
 create_postinst_script() {
-    cat > debian/DEBIAN/postinst << 'EOF'
-#!/bin/bash
-set -e
-
-# Verify ROS setup still exists
-if [ -f /opt/ros/humble/setup.bash ]; then
-    echo "rosbridge_suite with BSON support has been installed."
-    echo "The packages have been installed to the standard ROS 2 Humble locations:"
-    echo "  Python packages: /opt/ros/humble/lib/python3.10/site-packages/"
-    echo "  Launch files: /opt/ros/humble/share/"
-    echo ""
-    echo "To use it:"
-    echo "  source /opt/ros/humble/setup.bash"
-    echo "  ros2 launch rosbridge_server rosbridge_websocket_launch.xml"
-else
-    echo "Warning: ROS 2 Humble setup.bash not found. Please ensure ROS 2 Humble is installed."
-fi
-
-exit 0
-EOF
+    local template_file="$SOURCE_DIR/.github/templates/postinst.template"
+    
+    if [ ! -f "$template_file" ]; then
+        log_error "PostInst template not found at $template_file"
+        log_error "This file is required for generating postinst script."
+        exit 1
+    fi
+    
+    log_debug "Creating postinst script from template..."
+    sed "s/ROS_DISTRO_PLACEHOLDER/$ROS_DISTRO/g" \
+        "$template_file" > debian/DEBIAN/postinst
     chmod 755 debian/DEBIAN/postinst
 }
 
 create_prerm_script() {
-    cat > debian/DEBIAN/prerm << 'EOF'
-#!/bin/bash
-set -e
-
-# Note: Files are managed by dpkg and will be automatically removed
-# No special cleanup needed as files are installed to standard locations
-
-exit 0
-EOF
+    local template_file="$SOURCE_DIR/.github/templates/prerm.template"
+    
+    if [ ! -f "$template_file" ]; then
+        log_error "PreRM template not found at $template_file"
+        log_error "This file is required for generating prerm script."
+        exit 1
+    fi
+    
+    log_debug "Creating prerm script from template..."
+    cp "$template_file" debian/DEBIAN/prerm
     chmod 755 debian/DEBIAN/prerm
 }
 
