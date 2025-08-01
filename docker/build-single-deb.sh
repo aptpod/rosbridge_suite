@@ -366,50 +366,16 @@ dpkg-deb --build debian ros-humble-rosbridge-suite_${ARCH}.deb
 # Move to output directory
 mv *.deb /output/
 
-# Create simplified installation instructions
-cat > /output/INSTALL.md << EOF
-# Installation Instructions for rosbridge_suite with BSON support
+# Create installation instructions from template
+if [ ! -f "/source/.github/INSTALL_TEMPLATE.md" ]; then
+    echo "ERROR: INSTALL_TEMPLATE.md not found at /source/.github/INSTALL_TEMPLATE.md"
+    echo "This file is required for generating installation instructions."
+    exit 1
+fi
 
-## Prerequisites
-- Ubuntu 22.04 (Jammy) with ROS 2 Humble installed
-
-## Installation
-
-\`\`\`bash
-# Install dependencies first
-sudo apt update
-sudo apt install -y python3-twisted python3-tornado python3-autobahn python3-pymongo python3-pil
-
-# Install the BSON-enabled rosbridge_suite package
-sudo dpkg -i ./ros-humble-rosbridge-suite_*.deb
-\`\`\`
-
-## Usage
-
-\`\`\`bash
-# Source ROS environment
-source /opt/ros/humble/setup.bash
-
-# Run the WebSocket server with BSON support
-ros2 launch rosbridge_server rosbridge_websocket_launch.xml
-\`\`\`
-
-The WebSocket server will be available at ws://localhost:9090 with BSON support enabled.
-
-## Note
-
-This package installs to the standard ROS 2 Humble locations:
-- Python packages: \`/opt/ros/humble/lib/python3.10/site-packages/\`
-- Launch files: \`/opt/ros/humble/share/\`
-
-The package includes BSON serialization support for improved performance with binary data.
-
-## Uninstallation
-
-\`\`\`bash
-sudo apt remove ros-humble-rosbridge-suite
-\`\`\`
-EOF
+echo "Creating INSTALL.md from template..."
+sed "s/TAG_PLACEHOLDER/${PACKAGE_VERSION}/g; s/VERSION_PLACEHOLDER/${PACKAGE_VERSION}/g" \
+    /source/.github/INSTALL_TEMPLATE.md > /output/INSTALL.md
 
 echo "Build completed. Single package created!"
 ls -la /output/*.deb
