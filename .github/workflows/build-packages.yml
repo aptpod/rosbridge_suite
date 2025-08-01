@@ -226,7 +226,7 @@ jobs:
           REFERENCE="${{ steps.commit.outputs.hash }}"
         fi
         echo "body<<EOF" >> $GITHUB_OUTPUT
-        sed "s/TAG_PLACEHOLDER/${REFERENCE}/g" .github/RELEASE_TEMPLATE.md >> $GITHUB_OUTPUT
+        sed "s/TAG_PLACEHOLDER/${REFERENCE}/g" templates/ci-cd/RELEASE_TEMPLATE.md >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Create Release

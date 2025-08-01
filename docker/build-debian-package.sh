@@ -347,7 +347,7 @@ determine_package_version() {
 
 create_control_file() {
     local arch="$1"
-    local template_file="$SOURCE_DIR/.github/templates/debian-control.template"
+    local template_file="$SOURCE_DIR/templates/debian/control.template"
     
     if [ ! -f "$template_file" ]; then
         log_error "Debian control template not found at $template_file"
@@ -361,7 +361,7 @@ create_control_file() {
 }
 
 create_postinst_script() {
-    local template_file="$SOURCE_DIR/.github/templates/postinst.template"
+    local template_file="$SOURCE_DIR/templates/debian/postinst.template"
     
     if [ ! -f "$template_file" ]; then
         log_error "PostInst template not found at $template_file"
@@ -376,7 +376,7 @@ create_postinst_script() {
 }
 
 create_prerm_script() {
-    local template_file="$SOURCE_DIR/.github/templates/prerm.template"
+    local template_file="$SOURCE_DIR/templates/debian/prerm.template"
     
     if [ ! -f "$template_file" ]; then
         log_error "PreRM template not found at $template_file"
@@ -403,7 +403,7 @@ create_debian_package() {
 }
 
 create_install_documentation() {
-    local template_file="$SOURCE_DIR/.github/INSTALL_TEMPLATE.md"
+    local template_file="$SOURCE_DIR/templates/ci-cd/INSTALL_TEMPLATE.md"
     
     if [ ! -f "$template_file" ]; then
         log_error "INSTALL_TEMPLATE.md not found at $template_file"
