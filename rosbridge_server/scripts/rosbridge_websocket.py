@@ -165,6 +165,7 @@ class RosbridgeWebsocketNode(Node):
                 server.add_sockets(sockets)
                 self.declare_parameter("actual_port", actual_port)
                 self.get_logger().info(f"Rosbridge WebSocket server started on port {actual_port}")
+                self.get_logger().info(f"bson_only_mode: {RosbridgeWebSocket.bson_only_mode}")
                 connected = True
             except OSError as e:
                 self.get_logger().warn(
