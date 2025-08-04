@@ -542,18 +542,6 @@ BSON対応は`rosbridge_server/src/rosbridge_server/websocket_handler.py`に実�
 - **After**: 概算サイズ計算（1-2ms）
 - **改善率**: 50-100倍高速化
 
-### デバッグ情報の活用
-verbose debug modeによる詳細ログ（開発時のみ）：
-
-```bash
-# デバッグログ有効化
-ros2 launch rosbridge_server rosbridge_websocket_launch.xml verbose_debug_mode:=true
-
-# ログカテゴリ
-[BSON_DEBUG]: BSON効率化詳細
-[ROSBRIDGE LATENCY]: レスポンス遅延分析
-[WEBSOCKET_DEBUG]: WebSocket送信詳細
-```
 
 ## 統合テスト
 

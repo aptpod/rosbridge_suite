@@ -124,7 +124,6 @@ class RosbridgeWebSocket(WebSocketHandler):
     max_message_size = 10000000  # bytes
     unregister_timeout = 10.0  # seconds
     bson_only_mode = False
-    verbose_debug_mode = False
     node_handle = None
 
     @log_exceptions
@@ -136,7 +135,6 @@ class RosbridgeWebSocket(WebSocketHandler):
             "max_message_size": cls.max_message_size,
             "unregister_timeout": cls.unregister_timeout,
             "bson_only_mode": cls.bson_only_mode,
-            "verbose_debug_mode": cls.verbose_debug_mode,
         }
 
         try:
@@ -146,7 +144,6 @@ class RosbridgeWebSocket(WebSocketHandler):
             )
             # Configure message_conversion with bson_only_mode and verbose_debug_mode
             message_conversion.bson_only_mode = cls.bson_only_mode
-            message_conversion.verbose_debug_mode = cls.verbose_debug_mode
             message_conversion.configure()
             self.incoming_queue = IncomingQueue(self.protocol)
             self.incoming_queue.start()

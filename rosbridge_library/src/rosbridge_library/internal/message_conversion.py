@@ -101,13 +101,12 @@ ros_binary_types_list_braces = [
 binary_encoder = None
 binary_encoder_type = "default"
 bson_only_mode = False
-verbose_debug_mode = False
 
 
 # TODO(@jubeira): configure module with a node handle.
 # The original code doesn't seem to actually use these parameters.
 def configure(node_handle=None):
-    global binary_encoder, binary_encoder_type, bson_only_mode, verbose_debug_mode
+    global binary_encoder, binary_encoder_type, bson_only_mode
 
     if node_handle is not None:
         binary_encoder_type = node_handle.get_parameter_or(
