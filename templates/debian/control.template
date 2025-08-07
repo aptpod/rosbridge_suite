@@ -1,0 +1,17 @@
+Package: ros-ROS_DISTRO_PLACEHOLDER-rosbridge-suite
+Version: VERSION_PLACEHOLDER
+Section: misc
+Priority: optional
+Architecture: ARCH_PLACEHOLDER
+Depends: ros-ROS_DISTRO_PLACEHOLDER-ros-base, python3-twisted, python3-tornado, python3-autobahn, python3-pymongo, python3-pil
+Maintainer: ROS Tooling <ros-tooling@foxglove.dev>
+Description: ROS 2 rosbridge suite with BSON support
+ The rosbridge suite contains packages for creating WebSocket bridges
+ to ROS 2 systems. This version includes BSON serialization support
+ for improved performance with binary data.
+ .
+ This package includes:
+ - rosbridge_library (core functionality with BSON support)
+ - rosbridge_server (WebSocket server)
+ - rosapi (ROS API services)
+ - Message definitions

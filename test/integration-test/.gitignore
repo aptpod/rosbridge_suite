@@ -1,0 +1,9 @@
+# Test results
+results/
+
+# Node modules
+client/node_modules/
+client/package-lock.json
+
+# Debian packages are built from parent directory
+# and should not be committed here

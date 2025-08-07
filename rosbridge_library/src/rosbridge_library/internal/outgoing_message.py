@@ -1,6 +1,7 @@
 from rosbridge_library.internal.cbor_conversion import extract_cbor_values
 from rosbridge_library.internal.message_conversion import (
-    extract_values as extract_json_values,
+    extract_bson_values,
+    extract_json_values,
 )
 
 try:
@@ -45,3 +46,7 @@ class OutgoingMessage:
             self._cbor_raw_msg = encode_cbor(outgoing_msg)
 
         return self._cbor_raw_msg
+
+    def get_bson_values(self):
+        """Get message values optimized for BSON with binary efficiency."""
+        return extract_bson_values(self._message)

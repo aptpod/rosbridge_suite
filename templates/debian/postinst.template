@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+# Verify ROS setup still exists
+if [ -f /opt/ros/ROS_DISTRO_PLACEHOLDER/setup.bash ]; then
+    echo "rosbridge_suite with BSON support has been installed."
+    echo "The packages have been installed to the standard ROS 2 ROS_DISTRO_PLACEHOLDER locations:"
+    echo "  Python packages: /opt/ros/ROS_DISTRO_PLACEHOLDER/lib/python3.10/site-packages/"
+    echo "  Launch files: /opt/ros/ROS_DISTRO_PLACEHOLDER/share/"
+    echo ""
+    echo "To use it:"
+    echo "  source /opt/ros/ROS_DISTRO_PLACEHOLDER/setup.bash"
+    echo "  ros2 launch rosbridge_server rosbridge_websocket_launch.xml"
+else
+    echo "Warning: ROS 2 ROS_DISTRO_PLACEHOLDER setup.bash not found. Please ensure ROS 2 ROS_DISTRO_PLACEHOLDER is installed."
+fi
+
+exit 0

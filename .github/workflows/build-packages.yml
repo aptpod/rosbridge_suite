@@ -1,0 +1,264 @@
+name: Build Debian Packages
+
+on:
+  # Temporarily enable direct triggers for testing
+  push:
+    # Trigger on all branch pushes
+    branches:
+      - '**'
+    # Also trigger on all tags for releases
+    tags:
+      - '*'
+  pull_request:
+
+  # Trigger after CI workflow completes successfully (temporarily commented out)
+  # workflow_run:
+  #   workflows: ["CI"]
+  #   types:
+  #     - completed
+  #   branches: [ main, develop, feature/#1-add-bson-support-humble ]
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      skip_ci_check:
+        description: 'Skip CI success check'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }} package
+    runs-on: ubuntu-latest
+    # Temporarily disable CI success check for testing
+    # if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.inputs.skip_ci_check == 'true' }}
+    strategy:
+      matrix:
+        arch: [amd64, arm64]  # Remove armhf due to lack of official ROS Humble Docker support
+        # Temporarily disable arm64 if experiencing timeout issues
+        # arch: [amd64]
+      fail-fast: false  # Continue other builds even if one fails
+
+    steps:
+    - name: Display CI status
+      run: |
+        echo "CI workflow conclusion: ${{ github.event.workflow_run.conclusion }}"
+        echo "Manual skip CI check: ${{ github.event.inputs.skip_ci_check }}"
+        echo "Triggered by: ${{ github.event_name }}"
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up QEMU for cross-compilation
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: all
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Debian package for ${{ matrix.arch }}
+      timeout-minutes: 60  # ARM64 emulation can take 20+ minutes per package, total build may need 45-60 minutes
+      run: |
+        echo "Building Debian package for ${{ matrix.arch }}"
+        # Use specific architecture argument (new improved CLI)
+        ./build-deb.sh ${{ matrix.arch }}
+    - name: List generated packages
+      run: |
+        echo "Generated packages:"
+        ls -la debian-packages/
+    - name: Verify package integrity
+      run: |
+        echo "Verifying package integrity for ${{ matrix.arch }}"
+        for deb in debian-packages/*.deb; do
+          echo "Checking $deb:"
+          dpkg-deb --info "$deb"
+          dpkg-deb --contents "$deb" | head -20
+        done
+    - name: Upload Debian packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: debian-packages-${{ matrix.arch }}
+        path: |
+          debian-packages/*.deb
+          debian-packages/INSTALL.md
+        retention-days: 1
+        if-no-files-found: error
+    - name: Upload build logs (on failure)
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs-${{ matrix.arch }}
+        path: |
+          build/
+          log/
+        retention-days: 1
+        if-no-files-found: ignore
+
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: build
+    if: always()  # Temporarily simplified for testing
+    # if: always() && (github.event.workflow_run.conclusion == 'success' || github.event.inputs.skip_ci_check == 'true')
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
+    - name: Create build summary
+      run: |
+        echo "# Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Generated Packages" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        for arch in amd64 arm64; do
+          if [ -d "artifacts/debian-packages-$arch" ]; then
+            echo "### $arch" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **Successfully built**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Packages:" >> $GITHUB_STEP_SUMMARY
+            for pkg in artifacts/debian-packages-$arch/*.deb; do
+              if [ -f "$pkg" ]; then
+                size=$(stat -c%s "$pkg" 2>/dev/null || stat -f%z "$pkg" 2>/dev/null || echo "unknown")
+                echo "- $(basename "$pkg") (${size} bytes)" >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+            echo "" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### $arch" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Build failed**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+        done
+
+        echo "## BSON Support Status" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "All packages include BSON serialization support for improved performance with binary data." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        echo "## Installation Instructions" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+        echo "# Download the appropriate package for your architecture" >> $GITHUB_STEP_SUMMARY
+        echo "# Install dependencies" >> $GITHUB_STEP_SUMMARY
+        echo "sudo apt update" >> $GITHUB_STEP_SUMMARY
+        echo "sudo apt install -y python3-twisted python3-tornado python3-autobahn python3-pymongo python3-pil" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# Install the package" >> $GITHUB_STEP_SUMMARY
+        echo "sudo apt install -y ./ros-humble-rosbridge-suite_*.deb" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# Use the package" >> $GITHUB_STEP_SUMMARY
+        echo "source /opt/ros/humble/setup.bash" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# JSON-only mode (default)" >> $GITHUB_STEP_SUMMARY
+        echo "ros2 launch rosbridge_server rosbridge_websocket_launch.xml" >> $GITHUB_STEP_SUMMARY
+        echo "# or explicitly" >> $GITHUB_STEP_SUMMARY
+        echo "ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=false" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# BSON-only mode for better performance" >> $GITHUB_STEP_SUMMARY
+        echo "ros2 launch rosbridge_server rosbridge_websocket_launch.xml bson_only_mode:=true" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+    - name: List all artifacts
+      run: |
+        echo "Available artifacts:"
+        find artifacts/ -type f -name "*.deb" -exec ls -la {} \;
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build, summary]
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write  # Release作成とアップロードに必要
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
+
+    - name: Extract tag name
+      id: tag
+      run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Extract commit hash
+      id: commit
+      run: echo "hash=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
+    - name: Create release packages
+      run: |
+        mkdir -p release/
+        TAG_NAME="${{ steps.tag.outputs.tag }}"
+
+        # Create zip files for each architecture with tag name
+        for arch in amd64 arm64; do
+          if [ -d "artifacts/debian-packages-$arch" ]; then
+            echo "Creating zip for $arch with tag $TAG_NAME..."
+            cd artifacts/debian-packages-$arch
+            zip -r "../../release/rosbridge-suite-$TAG_NAME-$arch.zip" .
+            cd ../..
+            echo "Created: release/rosbridge-suite-$TAG_NAME-$arch.zip"
+            ls -la "release/rosbridge-suite-$TAG_NAME-$arch.zip"
+          else
+            echo "Warning: No artifacts found for $arch"
+          fi
+        done
+
+        echo "Release packages created:"
+        ls -la release/
+
+    - name: Load release template
+      id: release_template
+      run: |
+        if [[ "${{ startsWith(github.ref, 'refs/tags/') }}" == "true" ]]; then
+          # Tag exists: use tag name
+          REFERENCE="${{ steps.tag.outputs.tag }}"
+        else
+          # No tag: use commit hash
+          REFERENCE="${{ steps.commit.outputs.hash }}"
+        fi
+        echo "body<<EOF" >> $GITHUB_OUTPUT
+        sed "s/TAG_PLACEHOLDER/${REFERENCE}/g" templates/ci-cd/RELEASE_TEMPLATE.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      uses: actions/create-release@v1
+      id: create_release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.tag.outputs.tag }}
+        release_name: ROS 2 rosbridge_suite with BSON support ${{ steps.tag.outputs.tag }}
+        body: ${{ steps.release_template.outputs.body }}
+        draft: false
+        prerelease: false
+
+    - name: Upload amd64 Release Asset
+      if: hashFiles('release/rosbridge-suite-*-amd64.zip') != ''
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./release/rosbridge-suite-${{ steps.tag.outputs.tag }}-amd64.zip
+        asset_name: rosbridge-suite-${{ steps.tag.outputs.tag }}-amd64.zip
+        asset_content_type: application/zip
+
+    - name: Upload arm64 Release Asset
+      if: hashFiles('release/rosbridge-suite-*-arm64.zip') != ''
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./release/rosbridge-suite-${{ steps.tag.outputs.tag }}-arm64.zip
+        asset_name: rosbridge-suite-${{ steps.tag.outputs.tag }}-arm64.zip
+        asset_content_type: application/zip

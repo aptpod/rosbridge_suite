@@ -1,3 +1,17 @@
+# ⚠️ **This is aptpod's fork of rosbridge_suite**
+
+This repository contains **aptpod's enhanced version** of rosbridge_suite with:
+- **🚀 BSON serialization support** for improved performance with binary data
+- **🎯 ROS 2 Humble** specialized build and packaging
+- **📦 Automated GitHub Release** with architecture-specific packages (amd64/arm64)
+- **🔧 Enhanced CI/CD** with Docker-based cross-compilation
+
+📖 **[See FORK_README.md for aptpod-specific features and usage →](FORK_README.md)**
+
+---
+
+# Original rosbridge_suite Documentation
+
 rosbridge_suite
 ===============
 

@@ -14,3 +14,6 @@
 build
 install
 log
+
+# Debian packages output
+debian-packages

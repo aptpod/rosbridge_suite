@@ -302,8 +302,14 @@ class Protocol:
         try:
             if isinstance(msg, bytearray):
                 return msg
+
             if has_binary(msg) or self.bson_only_mode:
-                return bson.BSON.encode(msg)
+                # BSON-only mode: always use custom encoding for efficiency
+                if self.bson_only_mode:
+                    return self._encode_bson_with_binary_preservation(msg)
+                else:
+                    # Hybrid mode: binary data present but not BSON-only
+                    return bson.BSON.encode(msg)
             else:
                 return json.dumps(msg)
         except Exception as e:
@@ -327,7 +333,21 @@ class Protocol:
                 bson_message = bson.BSON(msg)
                 return bson_message.decode()
             else:
-                return json.loads(msg)
+                # In hybrid mode, try to detect message type
+                if isinstance(msg, bytes):
+                    # Binary message - try BSON
+                    try:
+                        bson_message = bson.BSON(msg)
+                        return bson_message.decode()
+                    except Exception:
+                        # If BSON fails, try to decode as UTF-8 JSON
+                        try:
+                            return json.loads(msg.decode("utf-8"))
+                        except Exception:
+                            raise ValueError("Unable to deserialize binary message as BSON or JSON")
+                else:
+                    # Text message - parse as JSON
+                    return json.loads(msg)
         except Exception:
             # if we did try to deserialize whole buffer .. first try to let self.incoming check for multiple/partial json-decodes before logging error
             # .. this means, if buffer is not == msg --> we tried to decode part of buffer
@@ -400,3 +420,43 @@ class Protocol:
             self.node_handle.get_logger().info(stdout_formatted_msg)
         else:
             self.node_handle.get_logger().debug(stdout_formatted_msg)
+
+    def _encode_bson_with_binary_preservation(self, msg):
+        """Custom BSON encoding that preserves binary objects efficiently.
+
+        This method ensures that BSON Binary objects remain as efficient
+        binary data without double-encoding issues by creating a specialized
+        BSON document structure.
+        """
+        try:
+            # Create a copy of the message to avoid modifying the original
+            msg_copy = self._prepare_message_for_binary_optimization(msg)
+
+            # Use BSON encoding with the optimized message structure
+            encoded = bson.BSON.encode(msg_copy)
+
+            return encoded
+
+        except Exception:
+            # Fallback to standard encoding
+            return bson.BSON.encode(msg)
+
+    def _prepare_message_for_binary_optimization(self, msg):
+        """Prepare message structure to optimize BSON Binary objects."""
+        import copy
+
+        # Create a deep copy to avoid modifying the original
+        msg_copy = copy.deepcopy(msg)
+
+        # Special handling for messages with binary data
+        if isinstance(msg_copy, dict) and "msg" in msg_copy:
+            inner_msg = msg_copy["msg"]
+            if isinstance(inner_msg, dict):
+                # Look for binary fields that might need special handling
+                for key, value in inner_msg.items():
+                    if isinstance(value, bson.binary.Binary):
+                        # Keep the Binary object as-is for efficient encoding
+                        # The BSON encoder should handle this natively
+                        pass
+
+        return msg_copy

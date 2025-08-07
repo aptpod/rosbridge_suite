@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+# Note: Files are managed by dpkg and will be automatically removed
+# No special cleanup needed as files are installed to standard locations
+
+exit 0

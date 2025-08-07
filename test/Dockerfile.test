@@ -1,0 +1,62 @@
+# Test Dockerfile for verifying rosbridge_suite BSON package installation
+FROM ros:humble
+
+# Copy the debian package
+COPY debian-packages/ros-humble-rosbridge-suite_*.deb /tmp/
+
+# Install dependencies first (as per INSTALL.md)
+RUN apt-get update && \
+    apt-get install -y \
+    python3-twisted \
+    python3-tornado \
+    python3-autobahn \
+    python3-pymongo \
+    python3-pil \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install our custom rosbridge_suite package
+RUN dpkg -i /tmp/ros-humble-rosbridge-suite_*.deb && \
+    rm /tmp/ros-humble-rosbridge-suite_*.deb
+
+# Verify installation structure
+RUN echo "=== Verifying installation structure ===" && \
+    echo "1. Checking Python packages location:" && \
+    find /opt/ros/humble -name "websocket_handler.py" -type f && \
+    echo "" && \
+    echo "2. Checking if BSON modifications are present:" && \
+    grep -q "bson_only_mode" /opt/ros/humble/lib/python3.10/site-packages/rosbridge_server/websocket_handler.py && \
+    echo "✓ BSON modifications found" || echo "✗ BSON modifications NOT found" && \
+    echo "" && \
+    echo "3. Checking launch files:" && \
+    find /opt/ros/humble/share -name "*.launch.xml" | grep rosbridge || echo "No launch files found" && \
+    echo "" && \
+    echo "4. Checking package list:" && \
+    ros2 pkg list | grep rosbridge || echo "No rosbridge packages found" && \
+    echo "=== End verification ==="
+
+# Create a test script to launch rosbridge_server
+RUN echo '#!/bin/bash\n\
+source /opt/ros/humble/setup.bash\n\
+echo "Starting rosbridge_server with BSON support..."\n\
+# Run in background and check if it starts successfully\n\
+timeout 5 ros2 launch rosbridge_server rosbridge_websocket_launch.xml &\n\
+LAUNCH_PID=$!\n\
+sleep 3\n\
+if ps -p $LAUNCH_PID > /dev/null; then\n\
+    echo "✓ rosbridge_server started successfully"\n\
+    # Check if websocket port is listening\n\
+    if netstat -tuln | grep -q ":9090"; then\n\
+        echo "✓ WebSocket server listening on port 9090"\n\
+    else\n\
+        echo "✗ WebSocket server not listening on port 9090"\n\
+    fi\n\
+    kill $LAUNCH_PID\n\
+else\n\
+    echo "✗ rosbridge_server failed to start"\n\
+fi' > /test_rosbridge.sh && chmod +x /test_rosbridge.sh
+
+# Install netstat for port checking
+RUN apt-get update && apt-get install -y net-tools && rm -rf /var/lib/apt/lists/*
+
+# Default command runs the test
+CMD ["/test_rosbridge.sh"]
